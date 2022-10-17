@@ -1342,6 +1342,10 @@ int bt_le_adv_start(const struct bt_le_adv_param *param,
 		return -ENOMEM;
 	}
 
+	if ((param->options & BT_LE_ADV_OPT_CONNECTABLE) && !IS_ENABLED(CONFIG_BT_PERIPHERAL)) {
+		BT_ERR("Using connectable advertising without CONFIG_BT_PERIPHERAL. Connections won't work.");
+	}
+
 	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
 	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
 		err = bt_le_adv_start_ext(adv, param, ad, ad_len, sd, sd_len);
@@ -1357,6 +1361,10 @@ int bt_le_adv_start(const struct bt_le_adv_param *param,
 		k_work_init_delayable(&adv->lim_adv_timeout_work, adv_timeout);
 		k_work_reschedule(&adv->lim_adv_timeout_work,
 				  K_SECONDS(CONFIG_BT_LIM_ADV_TIMEOUT));
+	}
+
+	if (err == -22) {
+		BT_ERR("bt_le_adv_start got bad parameters from application");
 	}
 
 	return err;

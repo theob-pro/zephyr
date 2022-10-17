@@ -18,6 +18,12 @@ zephyr_library_sources_ifdef(
   CONFIG_BT_CTLR_CRYPTO
   crypto/crypto.c
   )
+if(CONFIG_BT_CTRL_CRYPTO)
+  zephyr_library_sources(
+    crypto/crypto.c
+    crypto/h8.c
+  )
+endif()
 
 if(CONFIG_BT_LL_SW_SPLIT)
   if(CONFIG_BT_CTLR_ADVANCED_FEATURES)

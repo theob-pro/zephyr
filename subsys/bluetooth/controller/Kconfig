@@ -114,6 +114,10 @@ config BT_CTLR_CRYPTO
 	  Use random number generation and AES encryption support functions
 	  provided by the controller.
 
+config BT_CTLR_H8
+	select BT_TINYCRYPT
+	select BT_TINYCRYPT_AES_CMAC
+
 config BT_CTLR_HCI_VS_BUILD_INFO
 	string "Zephyr HCI VS Build Info string"
 	default ""

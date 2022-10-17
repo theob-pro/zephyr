@@ -1,0 +1,7 @@
+config BT_CRYPTO_H8
+    bool ""
+    default y
+    select CONFIG_BT_TINYCRYPT
+    help
+        desc
+endif # BT_CONN
