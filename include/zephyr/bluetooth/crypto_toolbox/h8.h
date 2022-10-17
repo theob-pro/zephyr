@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 /**
- * @brief Cryptograhic Toolbox function H8
+ * @brief Bluetooth Cryptograhic Toolbox function H8
  *
  * Defined in Core Vol 6, part E 1.1.1.
  *
@@ -17,4 +17,4 @@
  * @retval 0 Computation was successful. @p res contains the result.
  * @retval @-EIO
  */
-int h8(const uint8_t k[16], const uint8_t s[16], const uint8_t key_id[4], uint8_t res[16]);
+int bt_crypto_toolbox_h8(const uint8_t k[16], const uint8_t s[16], const uint8_t key_id[4], uint8_t res[16]);
