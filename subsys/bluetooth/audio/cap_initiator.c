@@ -11,21 +11,31 @@
 #include "cap_internal.h"
 #include "csis_internal.h"
 
-#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_CAP_INITIATOR)
-#define LOG_MODULE_NAME bt_cap_initiator
-#include "common/log.h"
+#include <zephyr/logging/log.h>
+
+#ifdef CONFIG_BT_DEBUG_LOG
+#ifdef CONFIG_BT_CAP_INITIATOR
+#define LOG_LEVEL LOG_LEVEL_DBG
+#else
+#define LOG_LEVEL LOG_LEVEL_INF
+#endif
+#else
+#define LOG_LEVEL LOG_LEVEL_NONE
+#endif
+
+LOG_MODULE_REGISTER(bt_cap_initiator, LOG_LEVEL);
 
 static const struct bt_cap_initiator_cb *cap_cb;
 
 int bt_cap_initiator_register_cb(const struct bt_cap_initiator_cb *cb)
 {
 	CHECKIF(cb == NULL) {
-		BT_DBG("cb is NULL");
+		LOG_DBG("cb is NULL");
 		return -EINVAL;
 	}
 
 	CHECKIF(cap_cb != NULL) {
-		BT_DBG("callbacks already registered");
+		LOG_DBG("callbacks already registered");
 		return -EALREADY;
 	}
 
@@ -74,7 +84,7 @@ static void csis_client_discover_cb(struct bt_conn *conn,
 	struct cap_unicast_client *client;
 
 	if (err != 0) {
-		BT_DBG("CSIS client discover failed: %d", err);
+		LOG_DBG("CSIS client discover failed: %d", err);
 
 		if (cap_cb && cap_cb->unicast_discovery_complete) {
 			cap_cb->unicast_discovery_complete(conn, err, NULL);
@@ -88,14 +98,14 @@ static void csis_client_discover_cb(struct bt_conn *conn,
 					conn, client->csis_start_handle);
 
 	if (member == NULL || set_count == 0 || client->csis_inst == NULL) {
-		BT_ERR("Unable to find CSIS for CAS");
+		LOG_ERR("Unable to find CSIS for CAS");
 
 		if (cap_cb && cap_cb->unicast_discovery_complete) {
 			cap_cb->unicast_discovery_complete(conn, -ENODATA,
 							   NULL);
 		}
 	} else {
-		BT_DBG("Found CAS with CSIS");
+		LOG_DBG("Found CAS with CSIS");
 		if (cap_cb && cap_cb->unicast_discovery_complete) {
 			cap_cb->unicast_discovery_complete(conn, 0,
 							   client->csis_inst);
@@ -110,7 +120,7 @@ static uint8_t cap_unicast_discover_included_cb(struct bt_conn *conn,
 	params->func = NULL;
 
 	if (attr == NULL) {
-		BT_DBG("CAS CSIS include not found");
+		LOG_DBG("CAS CSIS include not found");
 
 		if (cap_cb && cap_cb->unicast_discovery_complete) {
 			cap_cb->unicast_discovery_complete(conn, 0, NULL);
@@ -137,7 +147,7 @@ static uint8_t cap_unicast_discover_included_cb(struct bt_conn *conn,
 			static bool csis_cbs_registered;
 			int err;
 
-			BT_DBG("CAS CSIS not known, discovering");
+			LOG_DBG("CAS CSIS not known, discovering");
 
 			if (!csis_cbs_registered) {
 				bt_csis_client_register_cb(&csis_client_cb);
@@ -146,7 +156,7 @@ static uint8_t cap_unicast_discover_included_cb(struct bt_conn *conn,
 
 			err = bt_csis_client_discover(conn);
 			if (err != 0) {
-				BT_DBG("Discover failed (err %d)", err);
+				LOG_DBG("Discover failed (err %d)", err);
 				if (cap_cb && cap_cb->unicast_discovery_complete) {
 					cap_cb->unicast_discovery_complete(conn,
 									   err,
@@ -154,7 +164,7 @@ static uint8_t cap_unicast_discover_included_cb(struct bt_conn *conn,
 				}
 			}
 		} else if (cap_cb && cap_cb->unicast_discovery_complete) {
-			BT_DBG("Found CAS with CSIS");
+			LOG_DBG("Found CAS with CSIS");
 			cap_cb->unicast_discovery_complete(conn, 0,
 							   client->csis_inst);
 		}
@@ -179,13 +189,13 @@ static uint8_t cap_unicast_discover_cas_cb(struct bt_conn *conn,
 		int err;
 
 		if (attr->handle == prim_service->end_handle) {
-			BT_DBG("Found CAS without CSIS");
+			LOG_DBG("Found CAS without CSIS");
 			cap_cb->unicast_discovery_complete(conn, 0, NULL);
 
 			return BT_GATT_ITER_STOP;
 		}
 
-		BT_DBG("Found CAS, discovering included CSIS");
+		LOG_DBG("Found CAS, discovering included CSIS");
 
 		params->uuid = NULL;
 		params->start_handle = attr->handle + 1;
@@ -195,7 +205,7 @@ static uint8_t cap_unicast_discover_cas_cb(struct bt_conn *conn,
 
 		err = bt_gatt_discover(conn, params);
 		if (err != 0) {
-			BT_DBG("Discover failed (err %d)", err);
+			LOG_DBG("Discover failed (err %d)", err);
 
 			params->func = NULL;
 			if (cap_cb && cap_cb->unicast_discovery_complete) {
@@ -214,7 +224,7 @@ int bt_cap_initiator_unicast_discover(struct bt_conn *conn)
 	int err;
 
 	CHECKIF(conn == NULL) {
-		BT_DBG("NULL conn");
+		LOG_DBG("NULL conn");
 		return -EINVAL;
 	}
 

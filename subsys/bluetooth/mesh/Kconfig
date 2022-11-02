@@ -921,14 +921,12 @@ config BT_MESH_SEQ_STORE_RATE
 
 endif # BT_SETTINGS
 
-config BT_MESH_DEBUG
-	bool "Debug logs"
-	depends on BT_DEBUG
-	help
-	  Use this option to enable debug logs for the Bluetooth
-	  Mesh functionality.
+parent-module = BT
+module = BT_MESH
+module-str = "Debug logs"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-if BT_MESH_DEBUG
+if BT_MESH_LOG_LEVEL_DBG
 
 config BT_MESH_DEBUG_USE_ID_ADDR
 	bool "Use identity address for all advertising"
@@ -938,114 +936,96 @@ config BT_MESH_DEBUG_USE_ID_ADDR
 	  traces), however it should never be enabled for a production
 	  build as it compromises the privacy of the device.
 
-config BT_MESH_DEBUG_NET
-	bool "Network layer debug"
-	help
-	  Use this option to enable Network layer debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_NET
+module-str = "Network layer"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_RPL
-	bool "Replay protection list debug"
-	help
-	  Use this option to enable Replay protection list debug logs
-	  for the Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_RPL
+module-str = "Replay protection list"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_TRANS
-	bool "Transport layer debug"
-	help
-	  Use this option to enable Transport layer debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_TRANS
+module-str = "Transport layer"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_BEACON
-	bool "Beacon debug"
-	help
-	  Use this option to enable Beacon-related debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_BEACON
+module-str = "Beacon"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_CRYPTO
-	bool "Crypto debug"
-	help
-	  Use this option to enable cryptographic debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_CRYPTO
+module-str = "Crypto"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_KEYS
-	bool "Key management debug"
-	help
-	  Use this option to enable key management debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_KEYS
+module-str = "Key management"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_PROV
-	bool "Provisioning debug"
-	help
-	  Use this option to enable Provisioning debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_PROV
+module-str = "Provisioning"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_PROVISIONER
-	bool "Provisioner debug"
-	help
-	  Use this option to enable Provisioner debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_PROVISIONER
+module-str = "Provisioner"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_PROV_DEVICE
-	bool "Provisioning device debug"
-	help
-	  Use this option to enable Provisioning device debug logs for the
-	  Bluetooth Mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_PROV_DEVICE
+module-str = "Provisioning device"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_ACCESS
-	bool "Access layer debug"
-	help
-	  Use this option to enable Access layer and device composition
-	  related debug logs for Bluetooth mesh.
+parent-module = BT_MESH
+module = BT_MESH_ACCESS
+module-str = "Access layer"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_MODEL
-	bool "Foundation model debug"
-	help
-	  Use this option to enable debug logs for the Foundation
-	  Models.
+parent-module = BT_MESH
+module = BT_MESH_MODEL
+module-str = "Foundation model"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_ADV
-	bool "Advertising debug"
-	help
-	  Use this option to enable advertising debug logs for
-	  the Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_ADV
+module-str = "Advertising"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_LOW_POWER
-	bool "Low Power debug"
-	help
-	  Use this option to enable Low Power debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_LOW_POWER
+module-str = "Low Power"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_FRIEND
-	bool "Friend debug"
-	help
-	  Use this option to enable Friend debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_FRIEND
+module-str = "Friend"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_PROXY
-	bool "Proxy debug"
-	depends on BT_MESH_GATT
-	help
-	  Use this option to enable Proxy protocol debug logs.
+parent-module = BT_MESH
+module = BT_MESH_PROXY
+module-str = "Proxy"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_SETTINGS
-	bool "Persistent settings debug"
-	depends on BT_SETTINGS
-	help
-	  Use this option to enable persistent settings debug logs.
+parent-module = BT_MESH
+module = BT_MESH_SETTINGS
+module-str = "Persistent settings"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_CDB
-	bool "Configuration database debug"
-	depends on BT_MESH_CDB
-	help
-	  Use this option to enable configuration database debug logs.
+parent-module = BT_MESH
+module = BT_MESH_CDB
+module-str = "Configuration database"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_MESH_DEBUG_CFG
-	bool "Configuration debug"
-	help
-	  Use this option to enable node configuration debug logs for the
-	  Bluetooth mesh functionality.
+parent-module = BT_MESH
+module = BT_MESH_CFG
+module-str = "Configuration"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-endif # BT_MESH_DEBUG
+endif # BT_MESH_LOG_LEVEL_DBG
 
 endif # BT_MESH

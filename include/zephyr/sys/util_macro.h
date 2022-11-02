@@ -317,6 +317,8 @@ extern "C" {
  */
 #define GET_ARGS_LESS_N(N, ...) Z_GET_ARGS_LESS_##N(__VA_ARGS__)
 
+#define UTIL_DEFAULT(prefered, fallback) COND_CODE_1(defined(prefered), (prefered), (fallback))
+
 /**
  * @brief Like <tt>a || b</tt>, but does evaluation and
  * short-circuiting at C preprocessor time.

@@ -46,11 +46,10 @@ config BT_BASS_MAX_SUBGROUPS
 
 ############### DEBUG ###############
 
-config BT_DEBUG_BASS
-	bool "Broadcast Audio Scan Service debug"
-	help
-	  Use this option to enable Broadcast Audio Scan Service debug logs for
-	  the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_BASS
+module-str = "Broadcast Audio Scan Service"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_BASS
 
@@ -82,11 +81,10 @@ config BT_BASS_CLIENT_RECV_STATE_COUNT
 
 ############### DEBUG ###############
 
-config BT_DEBUG_BASS_CLIENT
-	bool "Broadcast Audio Scan Service client debug"
-	help
-	  Use this option to enable Broadcast Audio Scan Service client
-	  debug logs for the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_BASS_CLIENT
+module-str = "Broadcast Audio Scan Service client"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_BASS_CLIENT
 

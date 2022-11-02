@@ -831,10 +831,10 @@ config BT_DF_VS_CONN_IQ_REPORT_16_BITS_IQ_SAMPLES
 	  extenstion to handle connection IQ report with samples that are in 16 bit signed integer
 	  format.
 
-config BT_DEBUG_DF
-	bool "Bluetooth Direction Finding debug"
-	help
-	  This option enables debug support for Bluetooth Direction Finding
+parent-module = BT
+module = BT_DF
+module-str = "Bluetooth Direction Finding"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_DF
 endif # BT_HCI_HOST
@@ -883,30 +883,26 @@ config BT_PER_ADV_SYNC_BUF_SIZE
 	  Unfragmented reports are forwarded as they are received.
 
 if BT_DEBUG
-config BT_DEBUG_SETTINGS
-	bool "Bluetooth storage debug"
-	depends on BT_SETTINGS
-	help
-	  This option enables debug support for Bluetooth storage.
 
-config BT_DEBUG_HCI_CORE
-	bool "Bluetooth HCI core debug"
-	help
-	  This option enables debug support for Bluetooth HCI
-	  core.
+parent-module = BT
+module = BT_SETTINGS
+module-str = "Bluetooth storage"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_CONN
-	bool "Bluetooth connection debug"
-	depends on BT_CONN || BT_ISO
-	help
-	  This option enables debug support for Bluetooth
-	  connection handling.
+parent-module = BT
+module = BT_HCI_CORE
+module-str = "Bluetooth HCI core"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_ISO
-	bool "ISO channel debug"
-	help
-	  Use this option to enable ISO channels debug logs for the
-	  Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CONN
+module-str = "Bluetooth connection"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
+
+parent-module = BT
+module = BT_ISO
+module-str = "ISO channel"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 config BT_DEBUG_ISO_DATA
 	bool "ISO channel data debug"
@@ -916,29 +912,20 @@ config BT_DEBUG_ISO_DATA
 	  Bluetooth Audio functionality. This will enable debug logs for all
 	  ISO data received and sent.
 
-config BT_DEBUG_KEYS
-	bool "Bluetooth security keys debug"
-	depends on BT_HCI_HOST
-	depends on BT_SMP
-	help
-	  This option enables debug support for the handling of
-	  Bluetooth security keys.
+parent-module = BT
+module = BT_KEYS
+module-str = "Bluetooth security keys"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-	  WARNING: This option prints out private security keys such as
-	  the Long Term Key.
-	  Use of this feature in production is strongly discouraged.
+parent-module = BT
+module = BT_SMP
+module-str = "Bluetooth Security Manager Protocol"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_SMP
-	bool "Bluetooth Security Manager Protocol (SMP) debug"
-	depends on BT_HCI_HOST
-	depends on BT_SMP
-	help
-	  This option enables debug support for the Bluetooth
-	  Security Manager Protocol (SMP).
-
-	  WARNING: This option prints out private security keys such as
-	  the Long Term Key.
-	  Use of this feature in production is strongly discouraged.
+parent-module = BT
+module = BT_SMP
+module-str = "Bluetooth Security Manager Protocol"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 config BT_SMP_SELFTEST
 	bool "Bluetooth SMP self tests executed on init"
@@ -955,46 +942,35 @@ config BT_SMP_FORCE_BREDR
 	  supporting BR/EDR Secure Connections. This option is solely for
 	  testing and should never be enabled on production devices.
 
-config BT_DEBUG_RFCOMM
-	bool "Bluetooth RFCOMM debug"
-	depends on BT_RFCOMM
-	help
-	  This option enables debug support for the Bluetooth
-	  RFCOMM layer.
+parent-module = BT
+module = BT_RFCOMM
+module-str = "Bluetooth RFCOMM"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_HFP_HF
-	bool "Bluetooth Hands Free Profile (HFP) debug"
-	depends on BT_HFP_HF
-	help
-	  This option enables debug support for the Bluetooth
-	  Hands Free Profile (HFP).
+parent-module = BT
+module = BT_HFP_HF
+module-str = "Bluetooth Hands Free Profile (HFP)"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_AVDTP
-	bool "Bluetooth AVDTP debug"
-	depends on BT_AVDTP
-	help
-	  This option enables debug support for the Bluetooth AVDTP.
+parent-module = BT
+module = BT_AVDTP
+module-str = "Bluetooth AVDTP debug"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_A2DP
-	bool "Bluetooth A2DP debug"
-	depends on BT_A2DP
-	help
-	  This option enables debug support for the Bluetooth
-	  A2DP profile.
+parent-module = BT
+module = BT_A2DP
+module-str = "Bluetooth A2DP"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_SDP
-	bool "Bluetooth Service Discovery Protocol (SDP) debug"
-	depends on BT_BREDR
-	help
-	  This option enables debug support for the Bluetooth
-	  Service Discovery Protocol (SDP).
+parent-module = BT
+module = BT_SDP
+module-str = "Bluetooth Service Discovery Protocol (SDP)"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_SERVICE
-	bool "Bluetooth Services debug"
-	depends on BT_CONN
-	help
-	  This option enables debug support for the Bluetooth
-	  Services.
+parent-module = BT
+module = BT_SERVICE
+module-str = "Bluetooth Services"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_DEBUG
 

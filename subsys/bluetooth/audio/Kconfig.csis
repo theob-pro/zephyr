@@ -48,11 +48,10 @@ config BT_CSIS_MAX_INSTANCE_COUNT
 
 ############### DEBUG ###############
 
-config BT_DEBUG_CSIS
-	bool "Coordinated Set Identification Service debug"
-	help
-	  Use this option to enable Coordinated Set Identification Service debug
-	  logs for the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CSIS
+module-str = "Coordinated Set Identification Service"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_CSIS
 
@@ -96,17 +95,14 @@ config BT_CSIS_CLIENT_ENC_SIRK_SUPPORT
 
 ############### DEBUG ###############
 
-config BT_DEBUG_CSIS_CLIENT
-	bool "Coordinated Set Identification Profile debug"
-	help
-	  Use this option to enable Coordinated Set Identification Profile debug
-	  logs for the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CSIS_CLIENT
+module-str = "Coordinated Set Identification Profile"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_CSIS_CLIENT
 
-config BT_DEBUG_CSIS_CRYPTO
-	bool "Coordinated Set Identification Service crypto functions debug"
-	depends on BT_CSIS_CLIENT || BT_CSIS
-	help
-	  Use this option to enable Coordinated Set Identification Service
-	  crypto functions debug logs for the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CSIS_CRYPTO
+module-str = "Coordinated Set Identification Service crypto functions"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"

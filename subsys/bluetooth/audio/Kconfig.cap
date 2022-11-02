@@ -26,12 +26,10 @@ config BT_CAP_ACCEPTOR_SET_MEMBER
 	  Enabling will take one of the allocated CSIS instances
 	  (BT_CSIS_MAX_INSTANCE_COUNT).
 
-config BT_DEBUG_CAP_ACCEPTOR
-	bool "Common Audio Profile debug"
-	depends on BT_CAP_ACCEPTOR
-	help
-	  Use this option to enable CAP debug logs for the
-	  Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CAP_ACCEPTOR
+module-str = "Common Audio Profile"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 config BT_CAP_INITIATOR
 	bool "Common Audio Profile Initiator Role Support [EXPERIMENTAL]"
