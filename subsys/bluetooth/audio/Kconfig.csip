@@ -49,11 +49,10 @@ config BT_CSIP_SET_MEMBER_MAX_INSTANCE_COUNT
 
 ############### DEBUG ###############
 
-config BT_DEBUG_CSIP_SET_MEMBER
-	bool "Coordinated Set Identification Service debug"
-	help
-	  Use this option to enable Coordinated Set Identification Service debug
-	  logs for the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CSIP_SET_MEMBER
+module-str = "Coordinated Set Identification Service"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_CSIP_SET_MEMBER
 
@@ -97,17 +96,14 @@ config BT_CSIP_SET_COORDINATOR_ENC_SIRK_SUPPORT
 
 ############### DEBUG ###############
 
-config BT_DEBUG_CSIP_SET_COORDINATOR
-	bool "Coordinated Set Identification Profile Set Coordinator debug"
-	help
-	  Use this option to enable Coordinated Set Identification Profile
-	  Set Coordinator debug logs for the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CSIP_SET_COORDINATOR
+module-str = "Coordinated Set Identification Profile Set Coordinator"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_CSIP_SET_COORDINATOR
 
-config BT_DEBUG_CSIP_SET_MEMBER_CRYPTO
-	bool "Coordinated Set Identification Profile crypto functions debug"
-	depends on BT_CSIP_SET_COORDINATOR || BT_CSIP_SET_MEMBER
-	help
-	  Use this option to enable Coordinated Set Identification Profile
-	  crypto functions debug logs for the Bluetooth Audio functionality.
+parent-module = BT
+module = BT_CSIP_SET_MEMBER_CRYPTO
+module-str = "Coordinated Set Identification Profile crypto functions"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"

@@ -107,9 +107,9 @@ config BT_MPL_TRACK_MAX_SIZE
 
 endif # BT_MPL_OBJECTS
 
-config BT_DEBUG_MPL
-	bool "Media player debug"
-	help
-	  Enables debug logs for the media player
+parent-module = BT
+module = BT_MPL
+module-str = "Media player"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_MPL

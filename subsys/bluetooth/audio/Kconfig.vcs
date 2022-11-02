@@ -47,11 +47,10 @@ config BT_VCS_AICS
 
 ############# DEBUG #############
 
-config BT_DEBUG_VCS
-	bool "Volume Control Service debug"
-	help
-	  Use this option to enable Volume Control Service debug logs for the
-	  Bluetooth Audio functionality.
+parent-module = BT
+module = BT_VCS
+module-str = "Volume Control Service"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_VCS
 
@@ -99,10 +98,9 @@ config BT_VCS_CLIENT_AICS
 
 ############# DEBUG #############
 
-config BT_DEBUG_VCS_CLIENT
-	bool "Volume Control Profile debug"
-	help
-	  Use this option to enable Volume Control Profile debug logs for the
-	  Bluetooth Audio functionality.
+parent-module = BT
+module = BT_VCS_CLIENT
+module-str = "Volume Control Profile"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_VCS_CLIENT

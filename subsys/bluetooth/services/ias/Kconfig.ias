@@ -37,11 +37,10 @@ config BT_IAS_CLIENT
 	help
 	This option enables support for Immediate Alert Service Client
 
-config BT_DEBUG_IAS_CLIENT
-	bool "Immediate Alert Service Client debug"
-	depends on BT_IAS_CLIENT
-	help
-	  This option enables enables Immediate Alert Service Client debug logs.
+parent-module = BT
+module = BT_IAS_CLIENT
+module-str = "Immediate Alert Service Client"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 module = BT_IAS
 module-str = IAS

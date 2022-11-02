@@ -371,18 +371,14 @@ endchoice # Bluetooth debug type
 
 if BT_DEBUG
 
-config BT_DEBUG_HCI_DRIVER
-	bool "Bluetooth HCI driver debug"
-	help
-	  This option enables debug support for the active
-	  Bluetooth HCI driver, including the Controller-side HCI layer
-	  when included in the build.
+parent-module = BT
+module = BT_HCI_DRIVER
+module-str = "Bluetooth HCI driver"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
-config BT_DEBUG_RPA
-	bool "Bluetooth Resolvable Private Address (RPA) debug"
-	depends on BT_RPA
-	help
-	  This option enables debug support for the Bluetooth
-	  Resolvable Private Address (RPA) generation and resolution.
+parent-module = BT
+module = BT_RPA
+module-str = "Bluetooth Resolvable Private Address (RPA)"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_DEBUG

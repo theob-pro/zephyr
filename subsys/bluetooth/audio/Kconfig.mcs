@@ -19,11 +19,10 @@ config BT_MCS
 
 if BT_MCS
 
-config BT_DEBUG_MCS
-	bool "Media Control Service debug"
-	help
-	  Use this option to enable Media Control Service debug logs for the
-	  Bluetooth Audio functionality.
+parent-module = BT
+module = BT_MCS
+module-str = "Media Control Service"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_MCS
 
@@ -132,10 +131,9 @@ config BT_MCC_SHELL
 
 #### MCC Debug logs ####
 
-config BT_DEBUG_MCC
-	bool "Media Control Client debug"
-	help
-	  Use this option to enable Media Control Client debug logs for the
-	  Bluetooth Audio functionality.
+parent-module = BT
+module = BT_MCC
+module-str = "Media Control Client"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_MCC

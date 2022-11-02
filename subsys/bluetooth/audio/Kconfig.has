@@ -95,10 +95,10 @@ config BT_HAS_PRESET_NAME_DYNAMIC
 
 endif # BT_HAS_PRESET_SUPPORT
 
-config BT_DEBUG_HAS
-	bool "Hearing Access Service debug"
-	help
-	  This option enables enables Hearing Access Service debug logs.
+parent-module = BT
+module = BT_HAS
+module-str = "Hearing Access Service"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
 
 endif # BT_HAS
 
@@ -112,8 +112,7 @@ config BT_HAS_CLIENT
 	help
 	  This option enables support for Hearing Access Service Client.
 
-config BT_DEBUG_HAS_CLIENT
-	bool "Hearing Access Service Client debug"
-	depends on BT_HAS_CLIENT
-	help
-	  This option enables enables Hearing Access Service Client debug logs.
+parent-module = BT
+module = BT_HAS_CLIENT
+module-str = "Hearing Access Service Client"
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
