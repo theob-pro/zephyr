@@ -1,0 +1,14 @@
+&spi1 {
+	status = "okay";
+
+	cs-gpios = <&gpioa 8 GPIO_ACTIVE_LOW>;
+
+	bt-hci@0 {
+		compatible = "zephyr,bt-hci-spi";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+		reset-gpios = <&gpiob 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		irq-gpios = <&gpiob 5 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+		label = "BT_HCI";
+	};
+};

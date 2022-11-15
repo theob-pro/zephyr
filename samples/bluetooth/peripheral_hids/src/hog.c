@@ -23,6 +23,8 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
 
+#include <zephyr/timing/timing.h>
+
 enum {
 	HIDS_REMOTE_WAKE = BIT(0),
 	HIDS_NORMALLY_CONNECTABLE = BIT(1),
@@ -168,6 +170,8 @@ void hog_init(void)
 
 #define SW0_NODE DT_ALIAS(sw0)
 
+#define MYPIN 0UL
+
 void hog_button_loop(void)
 {
 #if DT_NODE_HAS_STATUS(SW0_NODE, okay)
@@ -175,8 +179,15 @@ void hog_button_loop(void)
 
 	gpio_pin_configure_dt(&sw0, GPIO_INPUT);
 
+	timing_t start_time, end_time;
+	uint64_t total_cycles;
+	uint64_t total_ns;
+
 	for (;;) {
 		if (simulate_input) {
+			timing_init();
+			timing_start();
+
 			/* HID Report:
 			 * Byte 0: buttons (lower 3 bits)
 			 * Byte 1: X axis (int8)
@@ -188,8 +199,26 @@ void hog_button_loop(void)
 				report[0] |= BIT(0);
 			}
 
+			// NRF_P1->OUTSET = (1 << MYPIN);
+
+			start_time = timing_counter_get();
+
+			GPIOB->ODR |= (1UL << MYPIN);
+
 			bt_gatt_notify(NULL, &hog_svc.attrs[5],
 				       report, sizeof(report));
+
+			end_time = timing_counter_get();
+
+			GPIOB->ODR &= ~(1UL << MYPIN);
+
+			// NRF_P1->OUTCLR = (1 << MYPIN);
+
+			total_cycles = timing_cycles_get(&start_time, &end_time);
+			total_ns = timing_cycles_to_ns(total_cycles);
+			timing_stop();
+
+			printk("%lluns\n", total_ns);
 		}
 		k_sleep(K_MSEC(100));
 	}

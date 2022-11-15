@@ -127,8 +127,22 @@ static struct bt_conn_auth_cb auth_cb_display = {
 	.cancel = auth_cancel,
 };
 
+#define MYPIN 0UL
+
 void main(void)
 {
+	// B3 is connected to an LED on the 'Nucleo' board.
+	//    It should be set to push-pull low-speed output.
+	GPIOB->MODER  &= ~(0x3UL << (MYPIN*2UL));
+	GPIOB->MODER  |=  (0x1UL << (MYPIN*2UL));
+	GPIOB->OTYPER &= ~(1UL << MYPIN);
+	GPIOB->OSPEEDR |= (3UL << (MYPIN*2UL));
+
+	GPIOB->ODR |= (1UL << MYPIN);
+
+	// NRF_P1->DIRSET = (1 << MYPIN);
+	// NRF_P1->OUTCLR = (1 << MYPIN);
+
 	int err;
 
 	err = bt_enable(bt_ready);
@@ -137,7 +151,9 @@ void main(void)
 		return;
 	}
 
-	bt_conn_auth_cb_register(&auth_cb_display);
+	GPIOB->ODR &= ~(1UL << MYPIN);
 
+	bt_conn_auth_cb_register(&auth_cb_display);
+	printk("Here\n");
 	hog_button_loop();
 }

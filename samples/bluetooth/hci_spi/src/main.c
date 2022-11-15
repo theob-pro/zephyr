@@ -28,7 +28,7 @@
 #include <zephyr/bluetooth/hci_raw.h>
 
 #define LOG_MODULE_NAME hci_spi
-LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+LOG_MODULE_REGISTER(LOG_MODULE_NAME, 4);
 
 #define HCI_CMD                0x01
 #define HCI_ACL                0x02

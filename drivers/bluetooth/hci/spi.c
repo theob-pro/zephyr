@@ -1,5 +1,6 @@
 /* spi.c - SPI based Bluetooth driver */
 
+#include "zephyr/kernel.h"
 #define DT_DRV_COMPAT zephyr_bt_hci_spi
 
 /*
@@ -407,7 +408,7 @@ static int bt_spi_send(struct net_buf *buf)
 		}
 		k_sleep(K_MSEC(1));
 	}
-
+	k_sleep(K_USEC(200)); // ~Fix issue
 	k_sem_take(&sem_busy, K_FOREVER);
 
 	switch (bt_buf_get_type(buf)) {
