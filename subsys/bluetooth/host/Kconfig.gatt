@@ -265,15 +265,29 @@ endif #BT_DEVICE_NAME_GATT_WRITABLE
 
 if BT_DEBUG
 
-parent-module = BT
-module = BT_ATT
-module-str = "Bluetooth Attribute Protocol (ATT)"
-source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
+config BT_DEBUG_ATT
+	bool "Bluetooth Attribute Protocol (ATT) debug"
+	select DEPRECATED
+	help
+	  This option enables debug support for the Bluetooth
+	  Attribute Protocol (ATT).
 
-parent-module = BT
+module = BT_ATT
+legacy-debug-sym = BT_DEBUG_ATT
+module-str = "Bluetooth Attribute Protocol (ATT)"
+source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+
+config BT_DEBUG_GATT
+	bool "Bluetooth Generic Attribute Profile (GATT) debug"
+	select DEPRECATED
+	help
+	  This option enables debug support for the Bluetooth
+	  Generic Attribute Profile (GATT).
+
 module = BT_GATT
+legacy-debug-sym = BT_DEBUG_GATT
 module-str = "Bluetooth Generic Attribute Profile (GATT)"
-source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
+source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_DEBUG
 

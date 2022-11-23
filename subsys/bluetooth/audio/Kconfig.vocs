@@ -33,10 +33,17 @@ config BT_VOCS_MAX_OUTPUT_DESCRIPTION_SIZE
 
 ############# DEBUG #############
 
-parent-module = BT
+config BT_DEBUG_VOCS
+	bool "Volume Offset Control Service debug"
+	select DEPRECATED
+	help
+	  Use this option to enable Volume Offset Control Service debug logs for
+	  the Bluetooth Audio functionality.
+
 module = BT_VOCS
+legacy-debug-sym = BT_DEBUG_VOCS
 module-str = "Volume Offset Control Service"
-source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
+source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_VOCS
 
@@ -61,9 +68,16 @@ if BT_VOCS_CLIENT
 
 ############# DEBUG #############
 
-parent-module = BT
+config BT_DEBUG_VOCS_CLIENT
+	bool "Volume Offset Control Service client debug"
+	select DEPRECATED
+	help
+	  Use this option to enable Volume Offset Control Service client debug
+	  logs for the Bluetooth Audio functionality.
+
 module = BT_VOCS_CLIENT
+legacy-debug-sym = BT_DEBUG_VOCS_CLIENT
 module-str = "Volume Offset Control Service client"
-source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config_inherit"
+source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_VOCS_CLIENT
