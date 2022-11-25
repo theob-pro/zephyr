@@ -47,7 +47,7 @@ config BT_DEBUG_IAS_CLIENT
 module = BT_IAS_CLIENT
 legacy-debug-sym = BT_DEBUG_IAS_CLIENT
 module-str = "Immediate Alert Service Client"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 module = BT_IAS
 module-str = IAS

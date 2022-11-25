@@ -275,7 +275,7 @@ config BT_DEBUG_ATT
 module = BT_ATT
 legacy-debug-sym = BT_DEBUG_ATT
 module-str = "Bluetooth Attribute Protocol (ATT)"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 config BT_DEBUG_GATT
 	bool "Bluetooth Generic Attribute Profile (GATT) debug"
@@ -287,7 +287,7 @@ config BT_DEBUG_GATT
 module = BT_GATT
 legacy-debug-sym = BT_DEBUG_GATT
 module-str = "Bluetooth Generic Attribute Profile (GATT)"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_DEBUG
 

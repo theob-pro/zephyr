@@ -37,7 +37,7 @@ config BT_DEBUG_CAP_ACCEPTOR
 module = BT_CAP_ACCEPTOR
 legacy-debug-sym = BT_DEBUG_CAP_ACCEPTOR
 module-str = "Common Audio Profile"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 config BT_CAP_INITIATOR
 	bool "Common Audio Profile Initiator Role Support [EXPERIMENTAL]"

@@ -57,7 +57,7 @@ config BT_DEBUG_VCS
 module = BT_VCS
 legacy-debug-sym = BT_DEBUG_VCS
 module-str = "Volume Control Service"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_VCS
 
@@ -115,6 +115,6 @@ config BT_DEBUG_VCS_CLIENT
 module = BT_VCS_CLIENT
 legacy-debug-sym = BT_DEBUG_VCS_CLIENT
 module-str = "Volume Control Profile"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_VCS_CLIENT

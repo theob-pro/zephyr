@@ -139,7 +139,7 @@ config BT_DEBUG_TBS
 module = BT_TBS
 legacy-debug-sym = BT_DEBUG_TBS
 module-str = "Telephone Bearer Service"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_TBS
 
@@ -334,7 +334,7 @@ config BT_DEBUG_TBS_CLIENT
 module = BT_TBS_CLIENT
 legacy-debug-sym = BT_DEBUG_TBS_CLIENT
 module-str = "Telephone Bearer Service client"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_TBS_CLIENT
 

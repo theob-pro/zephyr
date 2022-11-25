@@ -44,7 +44,7 @@ config BT_DEBUG_AICS
 module = BT_AICS
 legacy-debug-sym = BT_DEBUG_AICS
 module-str = "Audio Input Control Service"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_AICS
 
@@ -79,6 +79,6 @@ config BT_DEBUG_AICS_CLIENT
 module = BT_AICS_CLIENT
 legacy-debug-sym = BT_DEBUG_AICS_CLIENT
 module-str = "Audio Input Control Service client"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_AICS_CLIENT

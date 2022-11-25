@@ -116,6 +116,6 @@ config BT_DEBUG_MPL
 module = BT_MPL
 legacy-debug-sym = BT_DEBUG_MPL
 module-str = "Media player"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_MPL

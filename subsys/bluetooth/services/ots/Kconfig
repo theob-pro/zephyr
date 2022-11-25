@@ -89,7 +89,7 @@ config BT_DEBUG_OTS_CLIENT
 module = BT_OTS_CLIENT
 legacy-debug-sym = BT_DEBUG_OTS_CLIENT
 module-str = "Object Transfer Service Client"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_OTS_CLIENT
 

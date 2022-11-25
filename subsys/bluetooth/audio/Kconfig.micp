@@ -45,7 +45,7 @@ config BT_DEBUG_MICP_MIC_DEV
 module = BT_MICP_MIC_DEV
 legacy-debug-sym = BT_DEBUG_MICP_MIC_DEV
 module-str = "Microphone Input Control Profile Microphone Device"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_MICP_MIC_DEV
 
@@ -89,6 +89,6 @@ config BT_DEBUG_MICP_MIC_CTLR
 module = BT_MICP_MIC_CTLR
 legacy-debug-sym = BT_DEBUG_MICP_MIC_CTLR
 module-str = "Microphone Input Control Profile Microphone Controller"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_MICP_MIC_CTLR

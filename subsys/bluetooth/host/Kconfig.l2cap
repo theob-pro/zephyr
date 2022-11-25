@@ -69,6 +69,6 @@ config BT_DEBUG_L2CAP
 module = BT_L2CAP
 legacy-debug-sym = BT_DEBUG_L2CAP
 module-str = "Bluetooth L2CAP"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endmenu

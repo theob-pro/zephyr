@@ -66,6 +66,6 @@ config MCTL_DEBUG
 module = MCTL
 legacy-debug-sym = MCTL_DEBUG
 module-str = "Media control"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # MCTL

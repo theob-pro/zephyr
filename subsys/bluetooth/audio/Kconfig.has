@@ -104,7 +104,7 @@ config BT_DEBUG_HAS
 module = BT_HAS
 legacy-debug-sym = BT_DEBUG_HAS
 module-str = "Hearing Access Service"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_HAS
 
@@ -128,4 +128,4 @@ config BT_DEBUG_HAS_CLIENT
 module = BT_HAS_CLIENT
 legacy-debug-sym = BT_DEBUG_HAS_CLIENT
 module-str = "Hearing Access Service Client"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"

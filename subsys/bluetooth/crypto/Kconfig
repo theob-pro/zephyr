@@ -24,4 +24,4 @@ config BT_DEBUG_CRYPTO
 module = BT_CRYPTO
 legacy-debug-sym = BT_DEBUG_CRYPTO
 module-str = "Bluetooth Cryptographic Toolbox"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"

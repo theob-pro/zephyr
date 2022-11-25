@@ -99,6 +99,6 @@ config BT_DEBUG_PACS
 module = BT_PACS
 legacy-debug-sym = BT_DEBUG_PACS
 module-str = "Published Audio Capabilities Service"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endmenu

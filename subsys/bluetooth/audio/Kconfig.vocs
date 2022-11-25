@@ -43,7 +43,7 @@ config BT_DEBUG_VOCS
 module = BT_VOCS
 legacy-debug-sym = BT_DEBUG_VOCS
 module-str = "Volume Offset Control Service"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_VOCS
 
@@ -78,6 +78,6 @@ config BT_DEBUG_VOCS_CLIENT
 module = BT_VOCS_CLIENT
 legacy-debug-sym = BT_DEBUG_VOCS_CLIENT
 module-str = "Volume Offset Control Service client"
-source "${ZEPHYR_BASE}/subsys/bluetooth/common/Kconfig.template.log_config_bt"
+source "subsys/bluetooth/common/Kconfig.template.log_config_bt"
 
 endif # BT_VOCS_CLIENT
