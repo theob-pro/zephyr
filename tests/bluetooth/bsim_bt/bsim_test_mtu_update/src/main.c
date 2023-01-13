@@ -78,9 +78,9 @@ static void test_central_main(void)
 	WAIT_FOR_FLAG(flag_notification_received);
 
 	if (is_data_equal) {
-		PASS("MTU Update test passed\n");
+		PASS("MTU Update Central test passed\n");
 	} else {
-		FAIL("MTU Update test failed\n");
+		FAIL("MTU Update Central test failed\n");
 	}
 }
 
@@ -91,7 +91,7 @@ static void test_peripheral_main(void)
 
 	run_peripheral_sample(notify_data, sizeof(notify_data), PERIPHERAL_NOTIFY_TIME);
 
-	PASS("MTU Update test passed\n");
+	PASS("MTU Update Peripheral test passed\n");
 }
 
 void test_tick(bs_time_t HW_device_time)

@@ -110,11 +110,38 @@ static uint8_t discover_func(struct bt_conn *conn, const struct bt_gatt_attr *at
 	return BT_GATT_ITER_STOP;
 }
 
+bool detect_mtu_test_service(struct bt_data *ad, void *found_)
+{
+	bool *found = found_;
+	
+	struct bt_uuid_128 uuid = {
+		.uuid.type = BT_UUID_TYPE_128,
+	};
+	
+	*found = false;
+
+	if (ad->type == BT_DATA_UUID128_ALL) {
+		size_t service_ad_count = ad->data_len / BT_UUID_SIZE_128;
+
+		for (int i=0; i < service_ad_count; i++) {
+			memcpy(uuid.val, &ad->data[i*BT_UUID_SIZE_128], BT_UUID_SIZE_128);
+
+			if (!bt_uuid_cmp(BT_UUID_MTU_TEST, &uuid.uuid)) {
+				*found = true;
+			}
+		}
+	}
+
+	return !(*found);
+}
+
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
-			 struct net_buf_simple *ad)
+			 struct net_buf_simple *ads)
 {
 	char addr_str[BT_ADDR_LE_STR_LEN];
 	int err;
+
+	bool service_found = false;
 
 	if (default_conn) {
 		return;
@@ -129,8 +156,10 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 	bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
 	printk("Device found: %s (RSSI %d)\n", addr_str, rssi);
 
-	/* connect only to devices in close proximity */
-	if (rssi < -40) {
+	bt_data_parse(ads, detect_mtu_test_service, &service_found);
+
+	if (rssi < -40 || !service_found) {
+		printk("This is not the device we are looking for.\n");
 		return;
 	}
 

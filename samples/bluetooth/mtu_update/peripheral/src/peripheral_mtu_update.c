@@ -15,6 +15,7 @@
 #include <zephyr/sys/util.h>
 
 #define MTU_TEST_SERVICE_TYPE BT_UUID_128_ENCODE(0x2e2b8dc3, 0x06e0, 0x4f93, 0x9bb2, 0x734091c356f0)
+#define DUMMY_TYPE BT_UUID_128_ENCODE(0x2eaaaac3, 0x06e0, 0x4f93, 0x9bb2, 0x734091c3aaaa)
 
 static struct bt_uuid_128 mtu_test_service = BT_UUID_INIT_128(MTU_TEST_SERVICE_TYPE);
 
@@ -23,7 +24,7 @@ static struct bt_uuid_128 notify_characteristic_uuid =
 
 static const struct bt_data adv_ad_data[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-	BT_DATA_BYTES(BT_DATA_UUID128_ALL, MTU_TEST_SERVICE_TYPE)};
+	BT_DATA_BYTES(BT_DATA_UUID128_ALL, DUMMY_TYPE, MTU_TEST_SERVICE_TYPE)};
 
 static void ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
