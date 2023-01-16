@@ -3659,6 +3659,7 @@ static uint8_t smp_pairing_random(struct bt_smp *smp, struct net_buf *buf)
 
 static uint8_t smp_pairing_failed(struct bt_smp *smp, struct net_buf *buf)
 {
+	__ASSERT_NO_MSG(0);
 	struct bt_conn *conn = smp->chan.chan.conn;
 	const struct bt_conn_auth_cb *smp_auth_cb = latch_auth_cb(smp);
 	struct bt_smp_pairing_fail *req = (void *)buf->data;
