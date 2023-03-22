@@ -347,6 +347,13 @@ int bt_id_reset(uint8_t id, bt_addr_le_t *addr, uint8_t *irk);
 int bt_id_delete(uint8_t id);
 
 /**
+ * @brief Bluetooth data header size.
+ *
+ * Size of the type and the length field of the Bluetooth data.
+ */
+#define BT_DATA_HDR_SIZE 2
+
+/**
  * @brief Bluetooth data.
  *
  * Description of different data types that can be encoded into
