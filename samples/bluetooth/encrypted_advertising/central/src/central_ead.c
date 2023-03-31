@@ -11,7 +11,6 @@
 
 #include <zephyr/net/buf.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/__assert.h>
 
 #include <zephyr/bluetooth/ead.h>
 #include <zephyr/bluetooth/att.h>
@@ -23,27 +22,36 @@
 
 #include "common/bt_str.h"
 
-#include "util/gatt_discover.h"
-#include "util/att_read.h"
-#include "util/signal.h"
-#include "util/scan.h"
-
 #include "common.h"
 
 LOG_MODULE_REGISTER(ead_central_sample, CONFIG_BT_EAD_LOG_LEVEL);
 
-DEFINE_FLAG(wait_security_update);
-DEFINE_FLAG(wait_pairing_confirm);
-DEFINE_FLAG(wait_data_received);
-
-static struct material_key keymat;
 static uint8_t *received_data;
+static struct material_key keymat;
 
 static bt_addr_le_t peer_addr;
 static struct bt_conn *default_conn;
 
 static struct bt_conn_cb central_cb;
 static struct bt_conn_auth_cb central_auth_cb;
+
+static struct k_poll_signal conn_signal;
+static struct k_poll_signal paired_signal;
+static struct k_poll_signal sec_update_signal;
+static struct k_poll_signal device_found_cb_completed;
+
+/* GATT Discover data */
+static uint8_t gatt_disc_err;
+static uint16_t gatt_disc_end_handle;
+static uint16_t gatt_disc_start_handle;
+static struct k_poll_signal gatt_disc_signal;
+
+/* GATT Read data */
+static uint8_t gatt_read_err;
+static uint8_t *gatt_read_res;
+static uint16_t gatt_read_len;
+static uint16_t gatt_read_handle;
+static struct k_poll_signal gatt_read_signal;
 
 static bool data_parse_cb(struct bt_data *data, void *user_data)
 {
@@ -84,6 +92,7 @@ static bool data_parse_cb(struct bt_data *data, void *user_data)
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 			 struct net_buf_simple *ad)
 {
+	int err;
 	size_t parsed_data_size;
 	char addr_str[BT_ADDR_LE_STR_LEN];
 
@@ -105,27 +114,210 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 	bt_data_parse(ad, data_parse_cb, &parsed_data_size);
 
 	LOG_DBG("All data parsed. (total size: %zu)", parsed_data_size);
-	SET_FLAG(wait_data_received);
 
-	if (bt_le_scan_stop()) {
+	err = bt_le_scan_stop();
+	if (err) {
+		LOG_DBG("Failed to stop scanner (err %d)", err);
 		return;
 	}
+
+	k_poll_signal_raise(&device_found_cb_completed, 0);
 }
 
-static void start_scan(void)
+static void connect_device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
+				 struct net_buf_simple *ad)
+{
+	int err;
+	char addr_str[BT_ADDR_LE_STR_LEN];
+
+	if (default_conn) {
+		return;
+	}
+
+	/* Connect only to devices in close range */
+	if (rssi < -40) {
+		return;
+	}
+
+	bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
+
+	LOG_DBG("Device found: %s (RSSI %d)", addr_str, rssi);
+
+	err = bt_le_scan_stop();
+	if (err) {
+		LOG_DBG("Failed to stop scanner (err %d)", err);
+		return;
+	}
+
+	err = bt_conn_le_create(addr, BT_CONN_LE_CREATE_CONN, BT_LE_CONN_PARAM_DEFAULT,
+				&default_conn);
+	if (err) {
+		LOG_DBG("Failed to connect to %s (err %d)", addr_str, err);
+		return;
+	}
+
+	k_poll_signal_raise(&device_found_cb_completed, 0);
+}
+
+static void start_scan(bool connect)
 {
 	int err;
 
-	err = bt_le_scan_start(BT_LE_SCAN_PASSIVE, device_found);
+	k_poll_signal_reset(&conn_signal);
+	k_poll_signal_reset(&device_found_cb_completed);
+
+	err = bt_le_scan_start(BT_LE_SCAN_PASSIVE, connect ? connect_device_found : device_found);
 	if (err) {
 		LOG_DBG("Scanning failed to start (err %d)", err);
 		return;
 	}
 
 	LOG_DBG("Scanning started.");
+
+	if (connect) {
+		LOG_DBG("Waiting for connection");
+		await_signal(&conn_signal);
+	}
+
+	await_signal(&device_found_cb_completed);
 }
 
-struct k_poll_signal conn_signal;
+static uint8_t gatt_read_cb(struct bt_conn *conn, uint8_t att_err,
+			    struct bt_gatt_read_params *params, const void *data, uint16_t read_len)
+{
+	gatt_read_err = att_err;
+	gatt_read_len = read_len;
+	gatt_read_handle = params->by_uuid.start_handle;
+
+	if (!att_err) {
+		memcpy(gatt_read_res, data, read_len);
+	}
+
+	k_poll_signal_raise(&gatt_read_signal, 0);
+
+	return BT_GATT_ITER_STOP;
+}
+
+static int gatt_read(struct bt_conn *conn, const struct bt_uuid *type, size_t read_size,
+		     uint16_t start_handle, uint16_t end_handle, uint8_t *buf)
+{
+	int err;
+	size_t offset;
+	uint16_t handle;
+	struct bt_gatt_read_params params;
+
+	gatt_read_res = &buf[0];
+
+	params.handle_count = 0;
+	params.by_uuid.start_handle = start_handle;
+	params.by_uuid.end_handle = end_handle;
+	params.by_uuid.uuid = type;
+	params.func = gatt_read_cb;
+
+	k_poll_signal_reset(&gatt_read_signal);
+
+	err = bt_gatt_read(conn, &params);
+	if (err) {
+		LOG_DBG("GATT read failed (err %d)", err);
+		return -1;
+	}
+
+	await_signal(&gatt_read_signal);
+
+	offset = gatt_read_len;
+	handle = gatt_read_handle;
+
+	while (offset < read_size) {
+		gatt_read_res = &buf[offset];
+
+		params.handle_count = 1;
+		params.single.handle = handle;
+		params.single.offset = offset;
+
+		k_poll_signal_reset(&gatt_read_signal);
+
+		err = bt_gatt_read(conn, &params);
+		if (err) {
+			LOG_DBG("GATT read failed (err %d)", err);
+			return -1;
+		}
+
+		await_signal(&gatt_read_signal);
+
+		offset += gatt_read_len;
+	}
+
+	return 0;
+}
+
+static uint8_t gatt_discover_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+				struct bt_gatt_discover_params *params)
+{
+	gatt_disc_err = attr ? 0 : BT_ATT_ERR_ATTRIBUTE_NOT_FOUND;
+
+	if (attr) {
+		gatt_disc_start_handle = attr->handle;
+		gatt_disc_end_handle = ((struct bt_gatt_service_val *)attr->user_data)->end_handle;
+	}
+
+	k_poll_signal_raise(&gatt_disc_signal, 0);
+
+	return BT_GATT_ITER_STOP;
+}
+
+static int gatt_discover_primary_service(struct bt_conn *conn, const struct bt_uuid *service_type,
+					 uint16_t *start_handle, uint16_t *end_handle)
+{
+	int err;
+	struct bt_gatt_discover_params params;
+
+	params.type = BT_GATT_DISCOVER_PRIMARY;
+	params.start_handle = 0x0001;
+	params.end_handle = 0xffff;
+	params.uuid = service_type;
+	params.func = gatt_discover_cb;
+
+	k_poll_signal_reset(&gatt_disc_signal);
+
+	err = bt_gatt_discover(conn, &params);
+	if (err) {
+		LOG_DBG("Primary service discover failed (err %d)", err);
+		return -1;
+	}
+
+	await_signal(&gatt_disc_signal);
+
+	*start_handle = gatt_disc_start_handle;
+	*end_handle = gatt_disc_end_handle;
+
+	return gatt_disc_err;
+}
+
+static int update_security(void)
+{
+	int err;
+
+	k_poll_signal_reset(&paired_signal);
+	k_poll_signal_reset(&sec_update_signal);
+
+	err = bt_conn_set_security(default_conn, BT_SECURITY_L4);
+	if (err) {
+		LOG_ERR("Failed to set security (err %d)", err);
+		return -1;
+	}
+
+	await_signal(&paired_signal);
+
+	err = bt_conn_auth_passkey_confirm(default_conn);
+	if (err) {
+		LOG_DBG("Failed to confirm passkey.");
+		return -1;
+	}
+
+	await_signal(&sec_update_signal);
+
+	return 0;
+}
 
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
@@ -139,12 +331,12 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 		bt_conn_unref(default_conn);
 		default_conn = NULL;
 
-		start_scan();
+		start_scan(true);
 
 		return;
 	}
 
-	LOG_DBG("Connected: %s %p %p", addr, (void *)conn, (void *)default_conn);
+	LOG_DBG("Connected to: %s", addr);
 
 	k_poll_signal_raise(&conn_signal, 0);
 }
@@ -173,7 +365,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
 
 	if (!err) {
 		LOG_DBG("Security changed: %s level %u", addr, level);
-		SET_FLAG(wait_security_update);
+		k_poll_signal_raise(&sec_update_signal, 0);
 	} else {
 		LOG_DBG("Security failed: %s level %u err %d", addr, level, err);
 	}
@@ -204,7 +396,7 @@ static void auth_passkey_confirm(struct bt_conn *conn, unsigned int passkey)
 
 	LOG_DBG("Confirm passkey for %s: %s", addr, passkey_str);
 
-	SET_FLAG(wait_pairing_confirm);
+	k_poll_signal_raise(&paired_signal, 0);
 }
 
 static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
@@ -228,171 +420,107 @@ static void auth_cancel(struct bt_conn *conn)
 	LOG_DBG("Pairing cancelled: %s", addr);
 }
 
+static int init_bt()
+{
+	int err;
+
+	default_conn = NULL;
+
+	k_poll_signal_init(&conn_signal);
+	k_poll_signal_init(&paired_signal);
+	k_poll_signal_init(&sec_update_signal);
+	k_poll_signal_init(&gatt_disc_signal);
+	k_poll_signal_init(&gatt_read_signal);
+	k_poll_signal_init(&device_found_cb_completed);
+
+	err = bt_enable(NULL);
+	if (err) {
+		LOG_ERR("Bluetooth init failed (err %d)", err);
+		return -1;
+	}
+
+	LOG_DBG("Bluetooth initialized");
+
+	central_cb.connected = connected;
+	central_cb.disconnected = disconnected;
+	central_cb.security_changed = security_changed;
+	central_cb.identity_resolved = identity_resolved;
+
+	bt_conn_cb_register(&central_cb);
+
+	central_auth_cb.pairing_confirm = NULL;
+	central_auth_cb.passkey_confirm = auth_passkey_confirm;
+	central_auth_cb.passkey_display = auth_passkey_display;
+	central_auth_cb.passkey_entry = NULL;
+	central_auth_cb.oob_data_request = NULL;
+	central_auth_cb.cancel = auth_cancel;
+
+	err = bt_conn_auth_cb_register(&central_auth_cb);
+	if (err) {
+		return -1;
+	}
+
+	return 0;
+}
+
 int run_central_sample(uint8_t *test_received_data, struct material_key *test_received_keymat)
 {
 	int err;
+	bool connect;
 	uint16_t end_handle;
 	uint16_t start_handle;
-	struct bt_util_att_read read_result;
-	struct bt_util_att_read read_result2;
-	struct bt_util_scan_find_name scan_result;
-	struct gatt_service_discovery disc_result;
 
 	if (test_received_data != NULL) {
 		received_data = test_received_data;
 	}
 
-	/* Initialize Bluetooth and callbacks. */
-
-	{
-		central_cb.connected = connected;
-		central_cb.disconnected = disconnected;
-		central_cb.security_changed = security_changed;
-		central_cb.identity_resolved = identity_resolved;
-
-		bt_conn_cb_register(&central_cb);
-
-		default_conn = NULL;
-
-		err = bt_enable(NULL);
-		if (err) {
-			LOG_ERR("Bluetooth init failed (err %d)", err);
-			return -1;
-		}
-
-		LOG_DBG("Bluetooth initialized");
-
-		central_auth_cb.pairing_confirm = NULL;
-		central_auth_cb.passkey_confirm = auth_passkey_confirm;
-		central_auth_cb.passkey_display = auth_passkey_display;
-		central_auth_cb.passkey_entry = NULL;
-		central_auth_cb.oob_data_request = NULL;
-		central_auth_cb.cancel = auth_cancel;
-
-		err = bt_conn_auth_cb_register(&central_auth_cb);
-		if (err != 0) {
-			return -1;
-		}
+	/* Initialize Bluetooth and callbacks */
+	err = init_bt();
+	if (err) {
+		return -1;
 	}
 
-	/* Find and connect to our peripheral. */
+	/* Start scan and connect to our peripheral */
+	connect = true;
+	start_scan(connect);
 
-	{
-		LOG_DBG("Start scan");
-
-		bt_util_scan_find_name(&scan_result, "EAD Sample");
-		if (scan_result.api_err) {
-			LOG_DBG("Could not start scanner. %d", scan_result.api_err);
-			return -1;
-		}
-
-		LOG_DBG("Device found. Connecting %s", bt_addr_le_str(&scan_result.addr));
-		k_poll_signal_init(&conn_signal);
-
-		bt_conn_le_create(&scan_result.addr, BT_CONN_LE_CREATE_CONN,
-				  BT_LE_CONN_PARAM_DEFAULT, &default_conn);
-		if (err != 0) {
-			LOG_DBG("Failed to connect to %s", bt_addr_le_str(&scan_result.addr));
-			return -1;
-		}
-
-		LOG_DBG("Wait connection");
-		bt_util_await_signal(&conn_signal);
-	}
-
-	/* Update connection security level. */
-
-	{
-		err = bt_conn_set_security(default_conn, BT_SECURITY_L4);
-		if (err != 0) {
-			LOG_ERR("Failed to set security (err %d)", err);
-			return -1;
-		}
-
-		WAIT_FOR_FLAG(wait_pairing_confirm);
-
-		bt_conn_auth_passkey_confirm(default_conn);
-		if (err != 0) {
-			LOG_DBG("Failed to confirm passkey.");
-			return -1;
-		}
-
-		WAIT_FOR_FLAG(wait_security_update);
+	/* Update connection security level */
+	err = update_security();
+	if (err) {
+		LOG_DBG("Security update failed");
+		return -1;
 	}
 
 	/* Locate the primary service. */
-
-	{
-		LOG_DBG("Starting primary service discovery...");
-
-		bt_util_gatt_discover_primary_service_sync(&disc_result, default_conn,
-							   BT_UUID_CUSTOM_SERVICE);
-		if (disc_result.api_err || disc_result.att_err) {
-			LOG_DBG("GATT Service not found (bad stuff).");
-			return -1;
-		}
-
-		start_handle = disc_result.start_handle;
-		end_handle = disc_result.end_handle;
-
-		LOG_DBG("Discovery done.");
+	err = gatt_discover_primary_service(default_conn, BT_UUID_CUSTOM_SERVICE, &start_handle, &end_handle);
+	if (err) {
+		LOG_DBG("Service not found (err %d)", err);
+		return -1;
 	}
 
 	/* Read the Material Key characteristic. */
-
-	{
-		read_result.read_len = sizeof(keymat);
-		read_result.read_buf = (uint8_t *)&keymat;
-
-		bt_util_att_read_by_type_sync(&read_result, default_conn,
-					      BT_ATT_CHAN_OPT_UNENHANCED_ONLY, BT_UUID_GATT_EDKM,
-					      start_handle, end_handle);
-		if (read_result.api_err != 0 || read_result.att_err != 0) {
-			LOG_DBG("ATT Read fail.");
-			return -1;
-		}
-
-		LOG_DBG("Done %d %u", read_result.api_err, read_result.att_err);
-
-		/* The key material will not fit in a single PDU with the default MTU. But it will
-		 * fit the rest in the following.
-		 */
-		if (read_result.read_len < sizeof(keymat)) {
-			read_result2.read_len = sizeof(keymat) - read_result.read_len;
-			read_result2.read_buf = &read_result.read_buf[read_result.read_len];
-
-			bt_util_att_read_by_handle(&read_result2, default_conn,
-						   BT_ATT_CHAN_OPT_UNENHANCED_ONLY,
-						   read_result.handle, read_result.read_len);
-			if (read_result.api_err != 0 || read_result.att_err != 0) {
-				LOG_DBG("ATT Read fail.");
-				return -1;
-			}
-
-			LOG_DBG("Done %d %u", read_result.api_err, read_result.att_err);
-		}
-
-		LOG_HEXDUMP_DBG(keymat.session_key, BT_EAD_KEY_SIZE, "Session Key");
-		LOG_HEXDUMP_DBG(keymat.iv, BT_EAD_IV_SIZE, "IV");
+	err = gatt_read(default_conn, BT_UUID_GATT_EDKM, sizeof(keymat), start_handle, end_handle, (uint8_t *)&keymat);
+	if (err) {
+		LOG_DBG("GATT read failed (err %d)", err);
+		return -1;
 	}
+
+	LOG_HEXDUMP_DBG(keymat.session_key, BT_EAD_KEY_SIZE, "Session Key");
+	LOG_HEXDUMP_DBG(keymat.iv, BT_EAD_IV_SIZE, "IV");
 
 	if (test_received_keymat != NULL) {
 		memcpy(test_received_keymat, &keymat, sizeof(keymat));
 	}
 
 	/* Start a new scan to get the Advertising Data. */
-
-	{
-		err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
-		if (err) {
-			LOG_DBG("Failed to disconnect.");
-			return -1;
-		}
-
-		start_scan();
+	err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+	if (err) {
+		LOG_DBG("Failed to disconnect.");
+		return -1;
 	}
 
-	WAIT_FOR_FLAG(wait_data_received);
+	connect = false;
+	start_scan(connect);
 
 	return 0;
 }

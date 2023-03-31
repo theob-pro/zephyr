@@ -19,7 +19,6 @@
 #include <zephyr/bluetooth/bluetooth.h>
 
 #include <zephyr/logging/log.h>
-#include <sys/types.h>
 
 #include "data.h"
 
@@ -31,9 +30,8 @@ static struct bt_conn_auth_cb peripheral_auth_cb;
 
 static struct bt_conn *default_conn;
 
-DEFINE_FLAG(wait_passkey);
-DEFINE_FLAG(wait_connection);
-DEFINE_FLAG(wait_disconnection);
+static struct k_poll_signal disconn_signal;
+static struct k_poll_signal sec_update_signal;
 
 static ssize_t read_material_key(struct bt_conn *conn, const struct bt_gatt_attr *attr, void *buf,
 				 uint16_t len, uint16_t offset)
@@ -169,8 +167,6 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	LOG_DBG("Connected to %s", addr);
 
 	default_conn = conn;
-
-	SET_FLAG(wait_connection);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -181,7 +177,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	LOG_DBG("Disconnected from %s (reason 0x%02x)", addr, reason);
 
-	SET_FLAG(wait_disconnection);
+	k_poll_signal_raise(&disconn_signal, 0);
 }
 
 static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
@@ -208,7 +204,7 @@ static void auth_passkey_confirm(struct bt_conn *conn, unsigned int passkey)
 
 	LOG_DBG("Confirm passkey for %s: %s", addr, passkey_str);
 
-	SET_FLAG(wait_passkey);
+	k_poll_signal_raise(&sec_update_signal, 0);
 }
 
 static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
@@ -232,10 +228,40 @@ static void auth_cancel(struct bt_conn *conn)
 	LOG_DBG("Pairing cancelled: %s", addr);
 }
 
-void run_peripheral_sample(void)
+static void wait_for_disconnection(void)
+{
+	await_signal(&disconn_signal);
+}
+
+static int update_security(void)
 {
 	int err;
-	struct bt_le_ext_adv *adv = NULL;
+
+	await_signal(&sec_update_signal);
+
+	err = bt_conn_auth_passkey_confirm(default_conn);
+	if (err) {
+		LOG_DBG("Failed to confirm passkey.");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int init_bt(void)
+{
+	int err;
+
+	k_poll_signal_init(&disconn_signal);
+	k_poll_signal_init(&sec_update_signal);
+
+	err = bt_enable(NULL);
+	if (err) {
+		LOG_ERR("Bluetooth init failed (err %d)", err);
+		return -1;
+	}
+
+	LOG_DBG("Bluetooth initialized");
 
 	peripheral_cb.connected = connected;
 	peripheral_cb.disconnected = disconnected;
@@ -250,23 +276,34 @@ void run_peripheral_sample(void)
 	peripheral_auth_cb.oob_data_request = NULL;
 	peripheral_auth_cb.cancel = auth_cancel;
 
-	err = bt_enable(NULL);
+	err = bt_conn_auth_cb_register(&peripheral_auth_cb);
 	if (err) {
-		LOG_ERR("Bluetooth init failed (err %d)", err);
+		return -1;
 	}
 
-	LOG_DBG("Bluetooth initialized");
+	return 0;
+}
 
-	bt_conn_auth_cb_register(&peripheral_auth_cb);
+void run_peripheral_sample(void)
+{
+	int err;
+	struct bt_le_ext_adv *adv = NULL;
+
+	err = init_bt();
+	if (err) {
+		return;
+	}
 
 	create_adv(&adv);
 	start_adv(adv);
 	set_ad_data(adv);
 
-	WAIT_FOR_FLAG(wait_passkey);
-	bt_conn_auth_passkey_confirm(default_conn);
+	err = update_security();
+	if (err) {
+		return;
+	}
 
-	WAIT_FOR_FLAG(wait_disconnection);
+	wait_for_disconnection();
 
 	start_adv(adv);
 	set_ad_data(adv);
