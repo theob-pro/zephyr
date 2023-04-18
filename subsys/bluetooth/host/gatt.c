@@ -1355,6 +1355,7 @@ static void clear_ccc_cfg(struct bt_gatt_ccc_cfg *cfg)
 	bt_addr_le_copy(&cfg->peer, BT_ADDR_LE_ANY);
 	cfg->id = 0U;
 	cfg->value = 0U;
+	cfg->link_encrypted = false;
 }
 
 #if defined(CONFIG_BT_SETTINGS_DELAYED_STORE)
@@ -2071,6 +2072,29 @@ struct bt_gatt_attr *bt_gatt_attr_next(const struct bt_gatt_attr *attr)
 	return next;
 }
 
+static bool bt_gatt_ccc_cfg_is_matching_conn(const struct bt_conn *conn,
+					     const struct bt_gatt_ccc_cfg *cfg)
+{
+	if (cfg->link_encrypted && bt_conn_get_security(conn) < BT_SECURITY_L2) {
+		return false;
+	}
+
+	return bt_conn_is_peer_addr_le(conn, cfg->id, &cfg->peer);
+}
+
+static struct bt_conn *bt_gatt_ccc_cfg_conn_lookup(const struct bt_gatt_ccc_cfg *cfg)
+{
+	struct bt_conn *conn;
+
+	conn = bt_conn_lookup_addr_le(cfg->id, &cfg->peer);
+
+	if (bt_gatt_ccc_cfg_is_matching_conn(conn, cfg)) {
+		return conn;
+	}
+
+	return NULL;
+}
+
 static struct bt_gatt_ccc_cfg *find_ccc_cfg(const struct bt_conn *conn,
 					    struct _bt_gatt_ccc *ccc)
 {
@@ -2078,8 +2102,7 @@ static struct bt_gatt_ccc_cfg *find_ccc_cfg(const struct bt_conn *conn,
 		struct bt_gatt_ccc_cfg *cfg = &ccc->cfg[i];
 
 		if (conn) {
-			if (bt_conn_is_peer_addr_le(conn, cfg->id,
-						    &cfg->peer)) {
+			if (bt_gatt_ccc_cfg_is_matching_conn(conn, cfg)) {
 				return cfg;
 			}
 		} else if (bt_addr_le_eq(&cfg->peer, BT_ADDR_LE_ANY)) {
@@ -2173,6 +2196,7 @@ ssize_t bt_gatt_attr_write_ccc(struct bt_conn *conn,
 
 		bt_addr_le_copy(&cfg->peer, &conn->le.dst);
 		cfg->id = conn->id;
+		cfg->link_encrypted = (bt_conn_get_security(conn) >= BT_SECURITY_L2);
 	}
 
 	/* Confirm write if cfg is managed by application */
@@ -3251,8 +3275,7 @@ static uint8_t update_ccc(const struct bt_gatt_attr *attr, uint16_t handle,
 		struct bt_gatt_ccc_cfg *cfg = &ccc->cfg[i];
 
 		/* Ignore configuration for different peer or not active */
-		if (!cfg->value ||
-		    !bt_conn_is_peer_addr_le(conn, cfg->id, &cfg->peer)) {
+		if (!cfg->value || !bt_gatt_ccc_cfg_is_matching_conn(conn, cfg)) {
 			continue;
 		}
 
@@ -3326,11 +3349,11 @@ static uint8_t disconnected_cb(const struct bt_gatt_attr *attr, uint16_t handle,
 			continue;
 		}
 
-		if (!bt_conn_is_peer_addr_le(conn, cfg->id, &cfg->peer)) {
+		if (!bt_gatt_ccc_cfg_is_matching_conn(conn, cfg)) {
 			struct bt_conn *tmp;
 
 			/* Skip if there is another peer connected */
-			tmp = bt_conn_lookup_addr_le(cfg->id, &cfg->peer);
+			tmp = bt_gatt_ccc_cfg_conn_lookup(cfg);
 			if (tmp) {
 				if (tmp->state == BT_CONN_CONNECTED) {
 					value_used = true;
@@ -3420,7 +3443,7 @@ bool bt_gatt_is_subscribed(struct bt_conn *conn,
 	for (size_t i = 0; i < BT_GATT_CCC_MAX; i++) {
 		const struct bt_gatt_ccc_cfg *cfg = &ccc->cfg[i];
 
-		if (bt_conn_is_peer_addr_le(conn, cfg->id, &cfg->peer) &&
+		if (bt_gatt_ccc_cfg_is_matching_conn(conn, cfg) &&
 		    (ccc_type & ccc->cfg[i].value)) {
 			return true;
 		}
@@ -5571,6 +5594,7 @@ static uint8_t ccc_load(const struct bt_gatt_attr *attr, uint16_t handle,
 		}
 		bt_addr_le_copy(&cfg->peer, load->addr_with_id.addr);
 		cfg->id = load->addr_with_id.id;
+		cfg->link_encrypted = true;
 	}
 
 	cfg->value = load->entry->value;
