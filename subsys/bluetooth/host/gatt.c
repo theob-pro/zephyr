@@ -63,6 +63,7 @@ struct ccc_store {
 struct gatt_sub {
 	uint8_t id;
 	bt_addr_le_t peer;
+	bool link_encrypted;
 	sys_slist_t list;
 };
 
@@ -3492,7 +3493,9 @@ static struct gatt_sub *gatt_sub_find(struct bt_conn *conn)
 				return sub;
 			}
 		} else if (bt_conn_is_peer_addr_le(conn, sub->id, &sub->peer)) {
-			return sub;
+			if (sub->link_encrypted == (bt_conn_get_security(conn) >= BT_SECURITY_L2)) {
+				return sub;
+			}
 		}
 	}
 
@@ -3509,6 +3512,7 @@ static struct gatt_sub *gatt_sub_add(struct bt_conn *conn)
 		if (sub) {
 			bt_addr_le_copy(&sub->peer, &conn->le.dst);
 			sub->id = conn->id;
+			sub->link_encrypted = bt_conn_get_security(conn) >= BT_SECURITY_L2;
 		}
 	}
 
