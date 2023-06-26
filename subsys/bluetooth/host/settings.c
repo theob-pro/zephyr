@@ -5,6 +5,8 @@
  */
 
 #include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/settings/settings.h>
@@ -12,6 +14,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/settings.h>
 
 #include "common/bt_str.h"
 
@@ -292,6 +295,133 @@ int bt_settings_init(void)
 	err = settings_subsys_init();
 	if (err) {
 		LOG_ERR("settings_subsys_init failed (err %d)", err);
+		return err;
+	}
+
+	return 0;
+}
+
+static const char * const bt_settings_keys[] = {
+	"sc",
+	"cf",
+	"ccc",
+	"hash",
+	"name",
+	"id",
+	"irk",
+	"link_key",
+	"keys",
+	"mesh",
+};
+
+static bool mem_eq(const uint8_t *a1, size_t n1, const uint8_t *a2, size_t n2)
+{
+	if (n1 != n2) {
+		return false;
+	}
+
+	return (memcmp(a1, a2, n1) == 0);
+}
+
+static int bt_settings_load_direct_cleanup(const char *key, size_t len, settings_read_cb read_cb,
+					   void *cb_arg, void *param)
+{
+	int err;
+	int next_len;
+	int subsys_len;
+	unsigned long id;
+	const char *next;
+	const char *id_str;
+	bool key_is_supported;
+	char full_key[BT_SETTINGS_KEY_MAX];
+
+	bt_addr_le_t *id_addr = (bt_addr_le_t *)param;
+
+	subsys_len = settings_name_next(key, &next);
+
+	LOG_DBG("subsys: %.*s", subsys_len, key);
+
+	key_is_supported = false;
+
+	for (size_t i = 0; i < ARRAY_SIZE(bt_settings_keys); i++) {
+		if (mem_eq(key, subsys_len, bt_settings_keys[i], strlen(bt_settings_keys[i]))) {
+			key_is_supported = true;
+		}
+	}
+
+	if (key_is_supported) {
+		if (!next || !strncmp(key, "mesh", subsys_len)) {
+			/* key exist but does not need to be checked for
+			 * leftover because it is unique and not linked to ID.
+			 * We return and continue to look for next keys.
+			 */
+			return 0;
+		}
+
+		next_len = settings_name_next(next, &id_str);
+
+		if (!id_str) {
+			id = BT_ID_DEFAULT;
+		} else {
+			id = strtoul(id_str, NULL, 10);
+
+			if (id >= CONFIG_BT_ID_MAX) {
+				LOG_ERR("Invalid local identity (%lu)", id);
+
+				return 0;
+			}
+		}
+
+		if (!bt_addr_le_eq(&id_addr[(uint8_t)id], BT_ADDR_LE_ANY)) {
+			/* ID has not been deleted */
+			return 0;
+		}
+	}
+
+	/* At this point, we know that the key need to be cleared */
+	snprintk(full_key, sizeof(full_key), "bt/%s", key);
+	LOG_DBG("Key to delete: %s", full_key);
+
+	err = settings_delete(full_key);
+	if (err) {
+		LOG_ERR("Failed to delete key '%s' (err %d)", full_key, err);
+	}
+
+	return 0;
+}
+
+static int bt_settings_load_direct_id(const char *key, size_t len, settings_read_cb read_cb,
+				      void *cb_arg, void *param)
+{
+	ssize_t read_len;
+	int id_count;
+	bt_addr_le_t *id_addr = (bt_addr_le_t *)param;
+
+	read_len = read_cb(cb_arg, id_addr, CONFIG_BT_ID_MAX * sizeof(id_addr[0]));
+	if (read_len <= 0) {
+		LOG_ERR("Failed to read data (err %d)", len);
+	}
+
+	id_count = read_len / sizeof(id_addr[0]);
+
+	/* there is only one 'bt/id' key, no need for further subtree searching */
+	return 1;
+}
+
+int bt_settings_cleanup(void)
+{
+	int err;
+	bt_addr_le_t id_addr[CONFIG_BT_ID_MAX] = {0};
+
+	err = settings_load_subtree_direct("bt/id", bt_settings_load_direct_id, (void *)id_addr);
+	if (err) {
+		LOG_DBG("Failed to load 'bt/id' subtree (err %d)", err);
+		return err;
+	}
+
+	err = settings_load_subtree_direct("bt", bt_settings_load_direct_cleanup, &id_addr);
+	if (err) {
+		LOG_DBG("Failed to load 'bt' subtree (err %d)", err);
 		return err;
 	}
 
