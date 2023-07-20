@@ -5,6 +5,7 @@
  */
 
 #include <errno.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -301,17 +302,36 @@ int bt_settings_init(void)
 	return 0;
 }
 
-static const char * const bt_settings_keys[] = {
-	"sc",
-	"cf",
-	"ccc",
-	"hash",
-	"name",
-	"id",
-	"irk",
-	"link_key",
-	"keys",
-	"mesh",
+struct bt_settings_cleanup_leftover_key {
+	char *key;
+	sys_snode_t next_key;
+};
+
+struct bt_settings_cleanup_params {
+	bt_addr_le_t id_addrs[CONFIG_BT_ID_MAX];
+	bt_addr_le_t keys_addrs[CONFIG_BT_ID_MAX][CONFIG_BT_MAX_PAIRED];
+
+	sys_slist_t leftover_keys;
+
+	int error;
+};
+
+struct bt_settings_key {
+	char *key;
+	bool require_bond;
+};
+
+static const struct bt_settings_key bt_settings_keys[] = {
+	{"sc", true},
+	{"cf", true},
+	{"ccc", true},
+	{"hash", false},
+	{"name", false},
+	{"id", false},
+	{"irk", false},
+	{"link_keys", false},
+	{"keys", false},
+	{"mesh", false},
 };
 
 static bool mem_eq(const uint8_t *a1, size_t n1, const uint8_t *a2, size_t n2)
@@ -327,38 +347,57 @@ static int bt_settings_load_direct_cleanup(const char *key, size_t len, settings
 					   void *cb_arg, void *param)
 {
 	int err;
-	int next_len;
 	int subsys_len;
+	int addr_str_len;
 	unsigned long id;
-	const char *next;
 	const char *id_str;
+	const char *addr_str;
 	bool key_is_supported;
+	bool key_require_bond;
+	bt_addr_le_t peer_addr;
 	char full_key[BT_SETTINGS_KEY_MAX];
 
-	bt_addr_le_t *id_addr = (bt_addr_le_t *)param;
+	struct bt_settings_cleanup_leftover_key *leftover_key;
 
-	subsys_len = settings_name_next(key, &next);
+	struct bt_settings_cleanup_params *params = param;
+
+	subsys_len = settings_name_next(key, &addr_str);
 
 	LOG_DBG("subsys: %.*s", subsys_len, key);
 
 	key_is_supported = false;
+	key_require_bond = false;
 
 	for (size_t i = 0; i < ARRAY_SIZE(bt_settings_keys); i++) {
-		if (mem_eq(key, subsys_len, bt_settings_keys[i], strlen(bt_settings_keys[i]))) {
+		if (mem_eq(key, subsys_len, bt_settings_keys[i].key, strlen(bt_settings_keys[i].key))) {
 			key_is_supported = true;
+			key_require_bond = bt_settings_keys[i].require_bond;
+
+			break;
 		}
 	}
 
 	if (key_is_supported) {
-		if (!next || !strncmp(key, "mesh", subsys_len)) {
-			/* key exist but does not need to be checked for
-			 * leftover because it is unique and not linked to ID.
+		if (addr_str == NULL || mem_eq(key, subsys_len, "mesh", strlen("mesh"))) {
+			/* the key exists but does not need to be checked for
+			 * leftover data because it is unique and not linked to
+			 * ID.
+			 * -> if `addr_str` was not null it would mean that
+			 * it's an address.
+			 *
 			 * We return and continue to look for next keys.
 			 */
 			return 0;
 		}
 
-		next_len = settings_name_next(next, &id_str);
+		err = bt_settings_decode_key(addr_str, &peer_addr);
+		if (err) {
+			LOG_ERR("Failed to decode addr in key '%s' (err %d)", key, err);
+
+			return 0;
+		}
+
+		addr_str_len = settings_name_next(addr_str, &id_str);
 
 		if (!id_str) {
 			id = BT_ID_DEFAULT;
@@ -366,25 +405,81 @@ static int bt_settings_load_direct_cleanup(const char *key, size_t len, settings
 			id = strtoul(id_str, NULL, 10);
 
 			if (id >= CONFIG_BT_ID_MAX) {
-				LOG_ERR("Invalid local identity (%lu)", id);
+				LOG_WRN("Invalid local identity: %lu >= %u", id, CONFIG_BT_ID_MAX);
 
+				/* return 0 because if we return a non-zero
+                                 * value, settings subtree searching will be
+				 * stopped.
+				 */
 				return 0;
 			}
 		}
 
-		if (!bt_addr_le_eq(&id_addr[(uint8_t)id], BT_ADDR_LE_ANY)) {
+		if (!bt_addr_le_eq(&params->id_addrs[id], BT_ADDR_LE_ANY)) {
 			/* ID has not been deleted */
+
+			if (key_require_bond) {
+				for (size_t i = 0; i < ARRAY_SIZE(params->keys_addrs[id]); i++) {
+					if (bt_addr_le_eq(&params->keys_addrs[id][i], &peer_addr)) {
+						return 0;
+					}
+				}
+			} else {
+				return 0;
+			}
+		}
+	}
+
+	/* At this point, we know that the key needs to be cleared */
+	snprintk(full_key, sizeof(full_key), "bt/%s", key);
+	LOG_DBG("Leftover key found: %s", full_key);
+
+	leftover_key = k_malloc(sizeof(struct bt_settings_cleanup_leftover_key));
+	leftover_key->key = k_malloc(BT_SETTINGS_KEY_MAX);
+	strcpy(leftover_key->key, full_key);
+
+	sys_slist_append(&params->leftover_keys, &leftover_key->next_key);
+
+	return 0;
+}
+
+static int bt_settings_load_direct_keys(const char *key, size_t len, settings_read_cb read_cb,
+					void *cb_arg, void *param)
+{
+	int err;
+	unsigned long id;
+	const char *id_str;
+	struct bt_settings_cleanup_params *params = param;
+
+	settings_name_next(key, &id_str);
+
+	if (id_str == NULL) {
+		id = BT_ID_DEFAULT;
+	} else {
+		id = strtoul(id_str, NULL, 10);
+
+		if (id >= CONFIG_BT_ID_MAX) {
+			LOG_WRN("Invalid local identity: %lu >= %u", id, CONFIG_BT_ID_MAX);
+
 			return 0;
 		}
 	}
 
-	/* At this point, we know that the key need to be cleared */
-	snprintk(full_key, sizeof(full_key), "bt/%s", key);
-	LOG_DBG("Key to delete: %s", full_key);
+	for (size_t i = 0; i < CONFIG_BT_MAX_PAIRED; i++) {
+		if (bt_addr_le_eq(&params->keys_addrs[id][i], BT_ADDR_LE_NONE)) {
+			bt_addr_le_t addr;
 
-	err = settings_delete(full_key);
-	if (err) {
-		LOG_ERR("Failed to delete key '%s' (err %d)", full_key, err);
+			err = bt_settings_decode_key(key, &addr);
+			if (err) {
+				LOG_ERR("Failed to decode addr in key '%s' (err %d)", key, err);
+
+				return 0;
+			}
+
+			bt_addr_le_copy(&params->keys_addrs[id][i], &addr);
+
+			break;
+		}
 	}
 
 	return 0;
@@ -394,35 +489,66 @@ static int bt_settings_load_direct_id(const char *key, size_t len, settings_read
 				      void *cb_arg, void *param)
 {
 	ssize_t read_len;
-	int id_count;
-	bt_addr_le_t *id_addr = (bt_addr_le_t *)param;
+	struct bt_settings_cleanup_params *params = param;
 
-	read_len = read_cb(cb_arg, id_addr, CONFIG_BT_ID_MAX * sizeof(id_addr[0]));
+	read_len = read_cb(cb_arg, params->id_addrs, CONFIG_BT_ID_MAX * sizeof(params->id_addrs[0]));
 	if (read_len <= 0) {
-		LOG_ERR("Failed to read data (err %d)", len);
+		params->error = -EIO;
+		LOG_DBG("Failed to read data (err %d)", len);
 	}
-
-	id_count = read_len / sizeof(id_addr[0]);
 
 	/* there is only one 'bt/id' key, no need for further subtree searching */
 	return 1;
 }
 
-int bt_settings_cleanup(void)
+int bt_settings_cleanup(bool dry_run)
 {
 	int err;
-	bt_addr_le_t id_addr[CONFIG_BT_ID_MAX] = {0};
+	sys_snode_t *node;
+	struct bt_settings_cleanup_params params;
+	struct bt_settings_cleanup_leftover_key *key_to_delete;
 
-	err = settings_load_subtree_direct("bt/id", bt_settings_load_direct_id, (void *)id_addr);
-	if (err) {
-		LOG_DBG("Failed to load 'bt/id' subtree (err %d)", err);
-		return err;
+	sys_slist_init(&params.leftover_keys);
+
+	for (size_t i = 0; i < ARRAY_SIZE(params.id_addrs); i++) {
+		for (size_t j = 0; j < ARRAY_SIZE(params.keys_addrs[i]); j++) {
+			bt_addr_le_copy(&params.keys_addrs[i][j], BT_ADDR_LE_NONE);
+		}
+
+		bt_addr_le_copy(&params.id_addrs[i], BT_ADDR_LE_NONE);
 	}
 
-	err = settings_load_subtree_direct("bt", bt_settings_load_direct_cleanup, &id_addr);
-	if (err) {
-		LOG_DBG("Failed to load 'bt' subtree (err %d)", err);
-		return err;
+	params.error = 0;
+
+	settings_load_subtree_direct("bt/id", bt_settings_load_direct_id, (void *)&params);
+	if (params.error) {
+		LOG_DBG("Failed to load 'bt/id' subtree (err %d)", params.error);
+		return params.error;
+	}
+
+	settings_load_subtree_direct("bt/keys", bt_settings_load_direct_keys, (void *)&params);
+
+	settings_load_subtree_direct("bt", bt_settings_load_direct_cleanup, (void *)&params);
+
+	if (!dry_run) {
+		node = sys_slist_get(&params.leftover_keys);
+		while (node != NULL) {
+			key_to_delete = CONTAINER_OF(node, struct bt_settings_cleanup_leftover_key, next_key);
+
+			LOG_DBG("Deleting key: %s", key_to_delete->key);
+
+			err = settings_delete(key_to_delete->key);
+			if (err) {
+				LOG_ERR("Failed to delete key: %s (settings err %d)", key_to_delete->key, err);
+
+				return -EIO;
+			}
+
+			k_free(key_to_delete->key);
+			k_free(key_to_delete);
+
+			node = sys_slist_get(&params.leftover_keys);
+		}
 	}
 
 	return 0;
@@ -434,6 +560,8 @@ int bt_settings_store(const char *key, uint8_t id, const bt_addr_le_t *addr, con
 	int err;
 	char id_str[4];
 	char key_str[BT_SETTINGS_KEY_MAX];
+
+	LOG_DBG("Storing %s", key);
 
 	if (addr) {
 		if (id) {
@@ -456,6 +584,8 @@ int bt_settings_delete(const char *key, uint8_t id, const bt_addr_le_t *addr)
 	int err;
 	char id_str[4];
 	char key_str[BT_SETTINGS_KEY_MAX];
+
+	LOG_DBG("Deleting %s", key);
 
 	if (addr) {
 		if (id) {

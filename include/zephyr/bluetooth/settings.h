@@ -4,15 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdbool.h>
+
 /**
- * @brief This function act as a garbage collector for the Bluetooth settings.
+ * @brief This function acts as a garbage collector for the Bluetooth settings.
  * It will:
- * - Remove not used settings key under 'bt/' namespace;
- * - Remove possible leftover from unexpected behavior.
+ * - Remove unused settings keys under 'bt/' namespace;
+ * - Remove possible leftovers made by unexpected behavior.
  *
- * The settings are removed directly from the storage, the user need to run @ref
- * settings_load (or @ref settings_load_subtree to only load 'bt' namespace) to
- * apply the changes.
+ * The settings are removed directly from the storage, the user needs to run
+ * @ref settings_load (or @ref settings_load_subtree to only load 'bt'
+ * namespace) to apply the changes.
  *
  * Example of possible leftover: An identity has been deleted, the corresponding
  * address as been removed from 'bt/id' but before removing the corresponding
@@ -24,8 +26,9 @@
  * defined by the Bluetooth stack will be deleted.
  *
  * @note This function will ignore Bluetooth Mesh settings ('bt/mesh/'
- * namespace).
+ * namespace). Bluetooth Mesh manage their settings themselves and have their
+ * own layer on top of the settings.
  *
  * @return 0 on success, non-zero on failure
  */
-int bt_settings_cleanup(void);
+int bt_settings_cleanup(bool dry_run);

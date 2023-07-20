@@ -10,11 +10,11 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/settings.h>
+#include <asm-generic/errno.h>
 
 #include "settings.h"
 
 #include "common.h"
-#include "zephyr/sys/__assert.h"
 #include "zephyr/sys/util.h"
 #include <stddef.h>
 #include <string.h>
@@ -24,12 +24,10 @@ LOG_MODULE_DECLARE(bsim_bt_settings_cleanup, LOG_LEVEL_DBG);
 const char *expected_settings_key[] = {
 	"hash",
 	"id",
+	"keys/0000000000000",
 	"sc/0000000000000",
 	"cf/0000000000000",
 	"ccc/0000000000000",
-	"sc/0000000000000/2",
-	"cf/0000000000000/2",
-	"ccc/0000000000000/2",
 	"mesh/dummy/key",
 };
 
@@ -106,7 +104,7 @@ static void populate_settings(void)
 	bt_addr_le_t dummy_addr;
 	bt_addr_le_t ids_addr[CONFIG_BT_ID_MAX] = {0};
 
-	__ASSERT_NO_MSG(CONFIG_BT_ID_MAX >= 3);
+	BUILD_ASSERT(CONFIG_BT_ID_MAX >= 3);
 
 	bt_addr_le_copy(&dummy_addr, BT_ADDR_LE_ANY);
 
@@ -125,10 +123,12 @@ static void populate_settings(void)
 		FAIL("Failed to save ID (err %d)\n", err);
 	}
 
+	bt_settings_store_keys(0, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_sc(0, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_cf(0, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_ccc(0, &dummy_addr, &dummy_value, sizeof(dummy_value));
 
+	bt_settings_store_keys(1, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_sc(1, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_cf(1, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_ccc(1, &dummy_addr, &dummy_value, sizeof(dummy_value));
@@ -138,6 +138,7 @@ static void populate_settings(void)
 	settings_save_one("bt/i", &dummy_value, sizeof(dummy_value));
 	settings_save_one("bt/idd", &dummy_value, sizeof(dummy_value));
 
+	/* without keys for id 2, this settings should be deleted */
 	bt_settings_store_sc(2, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_cf(2, &dummy_addr, &dummy_value, sizeof(dummy_value));
 	bt_settings_store_ccc(2, &dummy_addr, &dummy_value, sizeof(dummy_value));
@@ -200,6 +201,7 @@ void run_tester(void)
 void run_dut(void)
 {
 	int err;
+	bool settings_cleanup_dry_run = false;
 
 	LOG_DBG("Starting test... (dut)");
 
@@ -208,7 +210,10 @@ void run_dut(void)
 		FAIL("settings_subsys_init failed (err %d)\n", err);
 	}
 
-	bt_settings_cleanup();
+	err = bt_settings_cleanup(settings_cleanup_dry_run);
+	if (err) {
+		FAIL("Failed to clean settings (err %d)\n", err);
+	}
 
 	print_all_settings();
 
