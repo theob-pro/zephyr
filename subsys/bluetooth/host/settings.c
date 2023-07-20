@@ -302,16 +302,11 @@ int bt_settings_init(void)
 	return 0;
 }
 
-struct bt_settings_cleanup_leftover_key {
-	char *key;
-	sys_snode_t next_key;
-};
-
 struct bt_settings_cleanup_params {
 	bt_addr_le_t id_addrs[CONFIG_BT_ID_MAX];
 	bt_addr_le_t keys_addrs[CONFIG_BT_ID_MAX][CONFIG_BT_MAX_PAIRED];
 
-	sys_slist_t leftover_keys;
+	char leftover_keys[1][BT_SETTINGS_KEY_MAX];
 
 	int error;
 };
@@ -356,8 +351,6 @@ static int bt_settings_load_direct_cleanup(const char *key, size_t len, settings
 	bool key_require_bond;
 	bt_addr_le_t peer_addr;
 	char full_key[BT_SETTINGS_KEY_MAX];
-
-	struct bt_settings_cleanup_leftover_key *leftover_key;
 
 	struct bt_settings_cleanup_params *params = param;
 
@@ -434,13 +427,18 @@ static int bt_settings_load_direct_cleanup(const char *key, size_t len, settings
 	snprintk(full_key, sizeof(full_key), "bt/%s", key);
 	LOG_DBG("Leftover key found: %s", full_key);
 
-	leftover_key = k_malloc(sizeof(struct bt_settings_cleanup_leftover_key));
-	leftover_key->key = k_malloc(BT_SETTINGS_KEY_MAX);
-	strcpy(leftover_key->key, full_key);
+	for (size_t i = 0; i < ARRAY_SIZE(params->leftover_keys); i++) {
+		if (strcmp(params->leftover_keys[i], "") == 0) {
+			strcpy(params->leftover_keys[i], full_key);
 
-	sys_slist_append(&params->leftover_keys, &leftover_key->next_key);
+			return 0;
+		}
+	}
 
-	return 0;
+	LOG_WRN("Leftover keys buffer full. There may still be leftover keys.");
+	params->error = -ENOBUFS;
+
+	return 1;
 }
 
 static int bt_settings_load_direct_keys(const char *key, size_t len, settings_read_cb read_cb,
@@ -504,11 +502,7 @@ static int bt_settings_load_direct_id(const char *key, size_t len, settings_read
 int bt_settings_cleanup(bool dry_run)
 {
 	int err;
-	sys_snode_t *node;
 	struct bt_settings_cleanup_params params;
-	struct bt_settings_cleanup_leftover_key *key_to_delete;
-
-	sys_slist_init(&params.leftover_keys);
 
 	for (size_t i = 0; i < ARRAY_SIZE(params.id_addrs); i++) {
 		for (size_t j = 0; j < ARRAY_SIZE(params.keys_addrs[i]); j++) {
@@ -528,28 +522,25 @@ int bt_settings_cleanup(bool dry_run)
 
 	settings_load_subtree_direct("bt/keys", bt_settings_load_direct_keys, (void *)&params);
 
-	settings_load_subtree_direct("bt", bt_settings_load_direct_cleanup, (void *)&params);
+	do {
+		params.error = 0;
+		memset(params.leftover_keys, 0, sizeof(params.leftover_keys));
+		settings_load_subtree_direct("bt", bt_settings_load_direct_cleanup, (void *)&params);
 
-	if (!dry_run) {
-		node = sys_slist_get(&params.leftover_keys);
-		while (node != NULL) {
-			key_to_delete = CONTAINER_OF(node, struct bt_settings_cleanup_leftover_key, next_key);
+		if (!dry_run) {
+			for (size_t i = 0; i < ARRAY_SIZE(params.leftover_keys); i++) {
+				if (strcmp(params.leftover_keys[i], "") != 0) {
+					LOG_DBG("Deleting key: %s", params.leftover_keys[i]);
 
-			LOG_DBG("Deleting key: %s", key_to_delete->key);
-
-			err = settings_delete(key_to_delete->key);
-			if (err) {
-				LOG_ERR("Failed to delete key: %s (settings err %d)", key_to_delete->key, err);
-
-				return -EIO;
+					err = settings_delete(params.leftover_keys[i]);
+					if (err) {
+						LOG_DBG("Failed to delete key '%s' (err %d)", params.leftover_keys[i], err);
+						return err;
+					}
+				}
 			}
-
-			k_free(key_to_delete->key);
-			k_free(key_to_delete);
-
-			node = sys_slist_get(&params.leftover_keys);
 		}
-	}
+	} while (params.error == -ENOBUFS);
 
 	return 0;
 }

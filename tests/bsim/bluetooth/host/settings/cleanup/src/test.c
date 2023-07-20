@@ -35,7 +35,7 @@ static int print_all_settings_cb(const char *key, size_t len, settings_read_cb r
 				 void *cb_arg, void *param)
 {
 	ssize_t err;
-	uint8_t *data = k_malloc(len);
+	uint8_t data[100] = {0};
 
 	err = read_cb(cb_arg, data, len);
 	if (err != len) {
@@ -44,8 +44,6 @@ static int print_all_settings_cb(const char *key, size_t len, settings_read_cb r
 
 	LOG_INF("key: 'bt/%s'", key);
 	LOG_HEXDUMP_INF(data, len, "value:");
-
-	k_free(data);
 
 	return 0;
 }
