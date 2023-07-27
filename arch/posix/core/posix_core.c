@@ -48,6 +48,7 @@
 #define ERPREFIX   PREFIX"error on "
 #define NO_MEM_ERR PREFIX"Can't allocate memory\n"
 
+#define PC_ENABLE_CANCEL 0
 #define PC_ALLOC_CHUNK_SIZE 64
 #define PC_REUSE_ABORTED_ENTRIES 0
 /* tests/kernel/threads/scheduling/schedule_api fails when setting
@@ -422,6 +423,7 @@ void posix_arch_clean_up(void)
 
 	terminate = true;
 
+#if (PC_ENABLE_CANCEL)
 	for (int i = 0; i < threads_table_size; i++) {
 		if (threads_table[i].state != USED) {
 			continue;
@@ -435,6 +437,7 @@ void posix_arch_clean_up(void)
 		}
 		/* LCOV_EXCL_STOP */
 	}
+#endif
 
 	free(threads_table);
 	threads_table = NULL;
