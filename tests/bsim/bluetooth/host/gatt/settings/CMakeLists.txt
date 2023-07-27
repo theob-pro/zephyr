@@ -10,7 +10,6 @@ target_sources(app PRIVATE
   src/client.c
   src/utils.c
   src/gatt_utils.c
-  src/settings.c
   src/main.c
   )
 

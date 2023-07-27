@@ -80,6 +80,7 @@ void client_round_2(void)
 	 * device will be unresponsive for this round.
 	 */
 	k_sleep(K_MSEC(CONFIG_BT_SETTINGS_DELAYED_STORE_MS));
+	k_sleep(K_MSEC(10));
 
 	disconnect(conn);
 }

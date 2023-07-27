@@ -20,7 +20,6 @@ void client_procedure(void);
 
 static int test_round;
 static int final_round;
-static char *settings_file;
 
 int get_test_round(void)
 {
@@ -32,18 +31,12 @@ bool is_final_round(void)
 	return test_round == final_round;
 }
 
-char *get_settings_file(void)
-{
-	return settings_file;
-}
-
 static void test_args(int argc, char **argv)
 {
-	__ASSERT(argc == 3, "Please specify only 3 test arguments\n");
+	__ASSERT(argc == 2, "Please specify only 2 test arguments\n");
 
 	test_round = atol(argv[0]);
 	final_round = atol(argv[1]);
-	settings_file = argv[2];
 
 	bs_trace_raw(0, "Test round %u\n", test_round);
 	bs_trace_raw(0, "Final round %u\n", final_round);
@@ -130,9 +123,9 @@ void backchannel_init(void)
 
 	} else {
 		/* send signal */
-		device_numbers[0] = get_device_nbr() + 1;
+		device_numbers[1] = get_device_nbr() + 1;
 		/* receive signal */
-		device_numbers[1] = get_device_nbr() - 1;
+		device_numbers[0] = get_device_nbr() - 1;
 		num_ch = 2;
 	}
 
@@ -181,19 +174,23 @@ void backchannel_sync_wait(uint channel)
  */
 static void stop_all_threads(void)
 {
+	irq_lock();
 	/* promote to highest priority */
-	k_thread_priority_set(k_current_get(), K_HIGHEST_THREAD_PRIO);
+	// k_thread_priority_set(k_current_get(), K_HIGHEST_THREAD_PRIO);
 	/* busy-wait loop */
 	for (;;) {
-		k_busy_wait(1000);
-		k_yield();
+		// k_busy_wait(1000);
+		// k_yield();
+		k_sleep(K_SECONDS(1));
 	}
 }
 
 void signal_next_test_round(void)
 {
+	uint channel = get_test_round() == 0 ? 0 : 1;
+
 	if (!is_final_round()) {
-		backchannel_sync_send(0);
+		backchannel_sync_send(channel);
 	}
 
 	PASS("round %d over\n", get_test_round());
@@ -204,9 +201,7 @@ void wait_for_round_start(void)
 {
 	backchannel_init();
 
-	if (is_final_round()) {
-		backchannel_sync_wait(0);
-	} else if (get_test_round() != 0) {
-		backchannel_sync_wait(1);
-	}
+	if (get_test_round() == 0) return;
+
+	backchannel_sync_wait(0);
 }

@@ -28,22 +28,22 @@ Execute ./bs_2G4_phy_v1 -v=${verbosity_level} -s="${simulation_id}" -D=8 -sim_le
 #
 # Each device will wait until the previous instance (called 'test round') has
 # finished executing before starting up.
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=0 -testid=server -RealEncryption=1 -argstest 0 6 "server"
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=1 -testid=server -RealEncryption=1 -argstest 1 6 "server"
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=2 -testid=server -RealEncryption=1 -argstest 2 6 "server"
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=3 -testid=server -RealEncryption=1 -argstest 3 6 "server"
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=4 -testid=server -RealEncryption=1 -argstest 4 6 "server"
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=5 -testid=server -RealEncryption=1 -argstest 5 6 "server"
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=6 -testid=server -RealEncryption=1 -argstest 6 6 "server"
+Execute "$test_exe" -v=${verbosity_level} -flash="${simulation_id}_server.log" \
+    -s="${simulation_id}" -d=0 -testid=server -RealEncryption=1 -argstest 0 6
+Execute "$test_exe" -start_offset=1e3 -v=${verbosity_level} -flash="${simulation_id}_server.log" \
+    -s="${simulation_id}" -d=1 -testid=server -RealEncryption=1 -argstest 1 6
+Execute "$test_exe" -start_offset=2e3 -v=${verbosity_level} -flash="${simulation_id}_server.log" \
+    -s="${simulation_id}" -d=2 -testid=server -RealEncryption=1 -argstest 2 6
+Execute "$test_exe" -start_offset=3e3 -v=${verbosity_level} -flash="${simulation_id}_server.log" \
+    -s="${simulation_id}" -d=3 -testid=server -RealEncryption=1 -argstest 3 6
+Execute "$test_exe" -start_offset=4e3 -v=${verbosity_level} -flash="${simulation_id}_server.log" \
+    -s="${simulation_id}" -d=4 -testid=server -RealEncryption=1 -argstest 4 6
+Execute "$test_exe" -start_offset=5e3 -v=${verbosity_level} -flash="${simulation_id}_server.log" \
+    -s="${simulation_id}" -d=5 -testid=server -RealEncryption=1 -argstest 5 6
+Execute "$test_exe" -start_offset=6e3 -v=${verbosity_level} -flash="${simulation_id}_server.log" \
+    -flash_rm -s="${simulation_id}" -d=6 -testid=server -RealEncryption=1 -argstest 6 6
 
-Execute "$test_exe" -v=${verbosity_level} \
-    -s="${simulation_id}" -d=7 -testid=client -RealEncryption=1 -argstest 0 0 "client"
+Execute "$test_exe" -v=${verbosity_level} -flash="${simulation_id}_client.log" \
+    -flash_rm -s="${simulation_id}" -d=7 -testid=client -RealEncryption=1 -argstest 0 0
 
 wait_for_background_jobs

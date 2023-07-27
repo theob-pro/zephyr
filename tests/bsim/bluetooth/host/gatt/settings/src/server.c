@@ -71,6 +71,7 @@ void server_round_2(void)
 	 * NVS. We still have to wait for the delayed work to be run.
 	 */
 	k_sleep(K_MSEC(CONFIG_BT_SETTINGS_DELAYED_STORE_MS));
+	k_sleep(K_MSEC(10));
 }
 
 void server_round_3(void)

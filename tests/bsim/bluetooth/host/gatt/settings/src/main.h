@@ -6,7 +6,6 @@
 
 #include <stdbool.h>
 
-char *get_settings_file(void);
 int get_test_round(void);
 bool is_final_round(void);
 
