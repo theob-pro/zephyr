@@ -46,3 +46,12 @@ function Execute() {
   run_in_background timeout -v ${EXECUTE_TIMEOUT} $@
 }
 
+function ExecuteWithGDB() {
+  # rm ~/bsim/bin/core.* || true
+
+  EXECUTE_TIMEOUT="${EXECUTE_TIMEOUT:-30}"
+  check_program_exists $1
+  # run_in_background "gdb -return-child-result -ex=r -ex "thread apply all bt" -ex=quit --batch --args $@"
+  run_in_background "gdb -return-child-result --command ${HOME}/bsim/bin/gdb.script --batch --args $@"
+  # run_in_background "gdb --args $@"
+}
