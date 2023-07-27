@@ -359,4 +359,11 @@ config BT_DEBUG_MONITOR_RTT_BUFFER_SIZE
 
 endif # BT_DEBUG_MONITOR_RTT
 
+config BT_DEBUG_MONITOR_POSIX_FILE
+	bool "Monitor protocol over Posix file"
+	select LOG
+	select BT_MONITOR
+	help
+	  Do things
+
 endchoice # Bluetooth debug type

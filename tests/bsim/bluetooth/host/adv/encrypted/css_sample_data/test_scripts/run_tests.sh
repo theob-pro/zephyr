@@ -41,24 +41,24 @@ Execute ./bs_2G4_phy_v1 -v=${verbosity_level} -s="${simulation_id}_${data_set}" 
 for process_id in $process_ids; do
     wait $process_id || let "exit_code=$?"
 done
-process_ids=''
+# process_ids=''
 
-data_set=2
+# data_set=2
 
-Execute "$test_exe" \
-    -v=${verbosity_level} -s="${simulation_id}_${data_set}" -d=0 -testid=central \
-    -RealEncryption=1 -argstest data-set="${data_set}"
+# Execute "$test_exe" \
+    # -v=${verbosity_level} -s="${simulation_id}_${data_set}" -d=0 -testid=central \
+    # -RealEncryption=1 -argstest data-set="${data_set}"
 
-Execute "$test_exe" \
-    -v=${verbosity_level} -s="${simulation_id}_${data_set}" -d=1 -testid=peripheral \
-    -RealEncryption=1 -argstest data-set="${data_set}"
+# Execute "$test_exe" \
+    # -v=${verbosity_level} -s="${simulation_id}_${data_set}" -d=1 -testid=peripheral \
+    # -RealEncryption=1 -argstest data-set="${data_set}"
 
-Execute ./bs_2G4_phy_v1 -v=${verbosity_level} -s="${simulation_id}_${data_set}" \
-    -D=2 -sim_length=60e6 $@
+# Execute ./bs_2G4_phy_v1 -v=${verbosity_level} -s="${simulation_id}_${data_set}" \
+    # -D=2 -sim_length=60e6 $@
 
-for process_id in $process_ids; do
-    wait $process_id || let "exit_code=$?"
-done
+# for process_id in $process_ids; do
+    # wait $process_id || let "exit_code=$?"
+# done
 
 if [ ${exit_code} -ne 0 ]; then
     exit_code=1

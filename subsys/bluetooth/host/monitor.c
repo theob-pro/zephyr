@@ -10,6 +10,9 @@
 
 #include <zephyr/types.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdio.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -157,7 +160,39 @@ static void monitor_send(const void *data, size_t len)
 		poll_out(*buf++);
 	}
 }
-#endif /* CONFIG_BT_DEBUG_MONITOR_UART */
+// #endif /* CONFIG_BT_DEBUG_MONITOR_UART */
+#elif defined(CONFIG_BT_DEBUG_MONITOR_POSIX_FILE)
+
+#define BT_MONITOR_POSIX_FILE_LEN 18
+
+static void monitor_send(const void *data, size_t len)
+{
+	pid_t pid = getpid();
+	char filename[BT_MONITOR_POSIX_FILE_LEN]; // log.PID.btsnoop
+
+	snprintk(filename, BT_MONITOR_POSIX_FILE_LEN, "log.%d.btsnoop", pid);
+	printk("filename: %s\n", filename);
+
+	int fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, (mode_t)0644);
+	if (fd == -1) {
+		k_oops();
+		return;
+	}
+
+	if (write(fd, data, len) == -1) {
+		close(fd);
+		return;
+	}
+
+	close(fd);
+}
+
+static void poll_out(char c)
+{
+	monitor_send(&c, sizeof(c));
+}
+
+#endif
 
 static void encode_drops(struct bt_monitor_hdr *hdr, uint8_t type,
 			 atomic_t *val)
