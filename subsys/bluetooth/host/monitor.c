@@ -165,7 +165,9 @@ static void monitor_send(const void *data, size_t len)
 
 #define BT_MONITOR_POSIX_FILE_LEN 18
 
-static void monitor_send(const void *data, size_t len)
+static int posix_file_fd;
+
+static void monitor_init()
 {
 	pid_t pid = getpid();
 	char filename[BT_MONITOR_POSIX_FILE_LEN]; // log.PID.btsnoop
@@ -173,18 +175,19 @@ static void monitor_send(const void *data, size_t len)
 	snprintk(filename, BT_MONITOR_POSIX_FILE_LEN, "log.%d.btsnoop", pid);
 	printk("filename: %s\n", filename);
 
-	int fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, (mode_t)0644);
+	int posix_file_fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, (mode_t)0666);
 	if (fd == -1) {
 		k_oops();
 		return;
 	}
+}
 
-	if (write(fd, data, len) == -1) {
-		close(fd);
+static void monitor_send(const void *data, size_t len)
+{
+	if (write(posix_file_fd, data, len) == -1) {
+		close(posix_file_fd);
 		return;
 	}
-
-	close(fd);
 }
 
 static void poll_out(char c)
@@ -403,6 +406,9 @@ LOG_BACKEND_DEFINE(bt_monitor, monitor_log_api, true);
 
 static int bt_monitor_init(void)
 {
+	IF_ENABLED(CONFIG_BT_DEBUG_MONITOR_POSIX_FILE, ({
+		monitor_init();
+	})
 
 #if defined(CONFIG_BT_DEBUG_MONITOR_RTT)
 	static uint8_t rtt_up_buf[RTT_BUF_SIZE];
