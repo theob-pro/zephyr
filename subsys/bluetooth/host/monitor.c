@@ -42,7 +42,7 @@
 #define BT_LOG_INFO     6
 #define BT_LOG_DBG      7
 
-/* TS resolution is 1/10th of a millisecond */
+/* TS unit is a 1/10th of a millisecond. I.e. 1 ts_unit == 0.1ms */
 #define MONITOR_TS_FREQ 10000
 
 /* Maximum (string) length of a log message */
