@@ -8,115 +8,52 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/l2cap.h>
-
-#include "host/hci_core.h"
-#include "common.h"
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/uuid.h>
 #include "utils.h"
 #include "bstests.h"
 
-#define LOG_MODULE_NAME main
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(dut, LOG_LEVEL_DBG);
 
 DEFINE_FLAG(is_connected);
-DEFINE_FLAG(flag_l2cap_connected);
-DEFINE_FLAG(flag_l2cap_rx_ok);
 
-static struct bt_l2cap_le_chan test_chan;
 
-NET_BUF_POOL_DEFINE(sdu_rx_pool,
-		    CONFIG_BT_MAX_CONN, BT_L2CAP_SDU_BUF_SIZE(L2CAP_SDU_LEN),
-		    8, NULL);
+static struct bt_uuid_128 test_service_uuid =
+	BT_UUID_INIT_128(0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12,
+			 0x78, 0x56, 0x34, 0x12);
+static struct bt_uuid_128 test_characteristic_uuid =
+	BT_UUID_INIT_128(0xf2, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12,
+			 0x78, 0x56, 0x34, 0x12);
 
-struct net_buf *alloc_buf_cb(struct bt_l2cap_chan *chan)
-{
-	return net_buf_alloc(&sdu_rx_pool, K_NO_WAIT);
-}
 
-void sent_cb(struct bt_l2cap_chan *chan)
-{
-	LOG_DBG("%p", chan);
-}
+static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+				    void *buf, uint16_t len, uint16_t offset);
 
-int recv_cb(struct bt_l2cap_chan *chan, struct net_buf *buf)
-{
-	static int sdu_count;
-
-	LOG_INF("SDU RX: len %d", buf->len);
-
-	LOG_HEXDUMP_DBG(buf->data, buf->len, "L2CAP RX");
-	sdu_count++;
-
-	/* Verify data follows the expected sequence */
-	for (int i = 0; i < buf->len; i++) {
-		__ASSERT_NO_MSG(buf->data[i] == (uint8_t)i);
-	}
-
-	/* We expect two SDUs */
-	if (sdu_count == 2) {
-		SET_FLAG(flag_l2cap_rx_ok);
-	}
-
-	return 0;
-}
-
-void l2cap_chan_connected_cb(struct bt_l2cap_chan *l2cap_chan)
-{
-	struct bt_l2cap_le_chan *chan =
-		CONTAINER_OF(l2cap_chan, struct bt_l2cap_le_chan, chan);
-
-	SET_FLAG(flag_l2cap_connected);
-
-	LOG_DBG("%x (tx mtu %d mps %d) (rx mtu %d mps %d)",
-		l2cap_chan,
-		chan->tx.mtu,
-		chan->tx.mps,
-		chan->rx.mtu,
-		chan->rx.mps);
-}
-
-void l2cap_chan_disconnected_cb(struct bt_l2cap_chan *chan)
-{
-	UNSET_FLAG(flag_l2cap_connected);
-	LOG_DBG("%p", chan);
-}
-
-static struct bt_l2cap_chan_ops ops = {
-	.connected = l2cap_chan_connected_cb,
-	.disconnected = l2cap_chan_disconnected_cb,
-	.alloc_buf = alloc_buf_cb,
-	.recv = recv_cb,
-	.sent = sent_cb,
+static struct bt_gatt_attr test_attributes[] = {
+	BT_GATT_PRIMARY_SERVICE(&test_service_uuid),
+	BT_GATT_CHARACTERISTIC(&test_characteristic_uuid.uuid, BT_GATT_CHRC_READ, BT_GATT_PERM_READ,
+			       test_on_attr_read_cb, NULL, NULL),
 };
 
-int server_accept_cb(struct bt_conn *conn, struct bt_l2cap_chan **chan)
+static struct bt_gatt_service test_gatt_service = BT_GATT_SERVICE(test_attributes);
+
+static uint16_t test_attribute_handle;
+
+static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+				    void *buf, uint16_t len, uint16_t offset)
 {
-	struct bt_l2cap_le_chan *le_chan = &test_chan;
+	/* Do not respond until allowed */
+	static bool first = true;
+	if (first) {
+		LOG_DBG("Sleeping");
+		k_sleep(K_SECONDS(20));
+		first = false;
+	}
 
-	memset(le_chan, 0, sizeof(*le_chan));
-	le_chan->chan.ops = &ops;
-	le_chan->rx.mtu = L2CAP_MTU;
-	*chan = &le_chan->chan;
+	LOG_DBG("return");
 
-	LOG_DBG("accepting new l2cap connection");
-
-	return 0;
-}
-
-static struct bt_l2cap_server test_l2cap_server = {
-	.accept = server_accept_cb
-};
-
-static int l2cap_server_register(bt_security_t sec_level)
-{
-	test_l2cap_server.psm = 0;
-	test_l2cap_server.sec_level = sec_level;
-
-	int err = bt_l2cap_server_register(&test_l2cap_server);
-
-	ASSERT(err == 0, "Failed to register l2cap server.");
-
-	return test_l2cap_server.psm;
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, "data", 4);
 }
 
 static void connected(struct bt_conn *conn, uint8_t conn_err)
@@ -210,38 +147,30 @@ static void disconnect_device(struct bt_conn *conn, void *data)
 	WAIT_FOR_FLAG_UNSET(is_connected);
 }
 
-static void do_dlu(struct bt_conn *conn, void *data)
-{
-	int err;
-
-	struct bt_conn_le_data_len_param param;
-
-	param.tx_max_len = 200;
-	param.tx_max_time = 1712;
-
-	err = bt_conn_le_data_len_update(conn, &param);
-	ASSERT(err == 0, "Can't update data length (err %d)\n", err);
-}
-
 void test_procedure_0(void)
 {
-	LOG_DBG("L2CAP MPS DUT/central started*");
+	LOG_DBG("Deadlock DUT/central started*");
 	int err;
+
+
+
+	err = bt_gatt_service_register(&test_gatt_service);
+	__ASSERT_NO_MSG(err == 0);
+
+	test_attribute_handle = test_attributes[2].handle;
+	LOG_ERR("test_attr: %u", test_attribute_handle);
+
+
 
 	err = bt_enable(NULL);
 	ASSERT(err == 0, "Can't enable Bluetooth (err %d)\n", err);
 	LOG_DBG("Central Bluetooth initialized.");
 
-	int psm = l2cap_server_register(BT_SECURITY_L1);
+	for (int i = 0; i < CONFIG_BT_MAX_CONN; i++) {
+		connect();
+	}
 
-	LOG_DBG("Registered server PSM %x", psm);
-	__ASSERT_NO_MSG(psm == L2CAP_PSM);
-
-	connect();
-
-	bt_conn_foreach(BT_CONN_TYPE_LE, do_dlu, NULL);
-
-	WAIT_FOR_FLAG(flag_l2cap_rx_ok);
+	k_sleep(K_SECONDS(60));
 
 	bt_conn_foreach(BT_CONN_TYPE_LE, disconnect_device, NULL);
 
@@ -265,7 +194,7 @@ void test_init(void)
 
 static const struct bst_test_instance test_to_add[] = {
 	{
-		.test_id = "test_0",
+		.test_id = "dut",
 		.test_pre_init_f = test_init,
 		.test_tick_f = test_tick,
 		.test_main_f = test_procedure_0,
@@ -283,6 +212,8 @@ bst_test_install_t test_installers[] = {install, NULL};
 int main(void)
 {
 	bst_main();
+
+
 
 	return 0;
 }
