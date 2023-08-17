@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 BOARD="${BOARD:-nrf52_bsim}"
-dut_exe="bs_${BOARD}_tests_bsim_bluetooth_host_l2cap_split_dut_prj_conf"
-tester_exe="bs_${BOARD}_tests_bsim_bluetooth_host_l2cap_split_tester_prj_conf"
+dut_exe="bs_${BOARD}_tests_bsim_bluetooth_host_deadlock_dut_prj_conf"
+tester_exe="bs_${BOARD}_tests_bsim_bluetooth_host_deadlock_tester_prj_conf"
 
 source ${ZEPHYR_BASE}/tests/bsim/sh_common.source
 
-test_name="l2cap_split"
+test_name="deadlock"
 simulation_id="${test_name}"
 verbosity_level=2
 EXECUTE_TIMEOUT=30

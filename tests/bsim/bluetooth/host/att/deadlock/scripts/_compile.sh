@@ -6,8 +6,8 @@
 source ${ZEPHYR_BASE}/tests/bsim/sh_common.source
 
 BOARD="${BOARD:-nrf52_bsim}"
-dut_exe="bs_${BOARD}_tests_bsim_bluetooth_host_l2cap_split_dut_prj_conf"
-tester_exe="bs_${BOARD}_tests_bsim_bluetooth_host_l2cap_split_tester_prj_conf"
+dut_exe="bs_${BOARD}_tests_bsim_bluetooth_host_deadlock_dut_prj_conf"
+tester_exe="bs_${BOARD}_tests_bsim_bluetooth_host_deadlock_tester_prj_conf"
 
 # terminate running simulations (if any)
 ${BSIM_COMPONENTS_PATH}/common/stop_bsim.sh
