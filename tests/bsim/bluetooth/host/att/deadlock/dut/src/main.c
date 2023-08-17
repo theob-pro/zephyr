@@ -44,14 +44,13 @@ static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_a
 				    void *buf, uint16_t len, uint16_t offset)
 {
 	/* Do not respond until allowed */
-	static bool first = true;
-	if (first) {
+	static int i = 0;
+	if (!i) {
 		LOG_DBG("Sleeping");
 		k_sleep(K_SECONDS(20));
-		first = false;
 	}
 
-	LOG_DBG("return");
+	LOG_ERR("handled read %i", i++);
 
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, "data", 4);
 }
@@ -159,8 +158,6 @@ void test_procedure_0(void)
 
 	test_attribute_handle = test_attributes[2].handle;
 	LOG_ERR("test_attr: %u", test_attribute_handle);
-
-
 
 	err = bt_enable(NULL);
 	ASSERT(err == 0, "Can't enable Bluetooth (err %d)\n", err);

@@ -9,6 +9,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/bluetooth/conn.h>
 #include "utils.h"
 #include "bstests.h"
 
@@ -16,6 +17,9 @@
 LOG_MODULE_REGISTER(tester, LOG_LEVEL_DBG);
 
 DEFINE_FLAG(is_connected);
+DEFINE_FLAG(flag_read_complete);
+
+static struct bt_conn *default_conn;
 
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
@@ -29,6 +33,8 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	}
 
 	LOG_DBG("%s", addr);
+
+	default_conn = bt_conn_ref(conn);
 
 	SET_FLAG(is_connected);
 }
@@ -58,7 +64,46 @@ static void adv(void)
 	ASSERT(!err, "Advertising failed to start (err %d)\n", err);
 
 	LOG_DBG("Waiting for Central...");
-	WAIT_FOR_FLAG(is_connected);
+}
+
+static uint8_t gatt_read_cb(struct bt_conn *conn, uint8_t err,
+			    struct bt_gatt_read_params *params,
+			    const void *data, uint16_t length)
+{
+	if (err != BT_ATT_ERR_SUCCESS) {
+		FAIL("Read failed: 0x%02X\n", err);
+	}
+
+	LOG_HEXDUMP_DBG(data, length, "Read data:");
+
+	SET_FLAG(flag_read_complete);
+
+	bt_conn_unref(default_conn);
+
+	return 0;
+}
+
+static void gatt_read(uint16_t handle)
+{
+	static struct bt_gatt_read_params read_params;
+	int err;
+
+	printk("Reading chrc\n");
+
+	read_params.func = gatt_read_cb;
+	read_params.handle_count = 1;
+	read_params.single.handle = handle;
+	read_params.single.offset = 0;
+
+	UNSET_FLAG(flag_read_complete);
+
+	err = bt_gatt_read(default_conn, &read_params);
+	if (err != 0) {
+		FAIL("bt_gatt_read failed: %d\n", err);
+	}
+
+	WAIT_FOR_FLAG(flag_read_complete);
+	printk("success\n");
 }
 
 void test_procedure_tester(void)
@@ -71,8 +116,12 @@ void test_procedure_tester(void)
 	LOG_DBG("Tester Bluetooth initialized.");
 
 	adv(); // TODO read from GATT
+	WAIT_FOR_FLAG(is_connected);
 
-	k_sleep(K_SECONDS(60));
+	int handle = 18; // trust me
+	gatt_read(handle);
+
+	WAIT_FOR_FLAG_UNSET(is_connected);
 
 	PASS("Tester done\n");
 }
