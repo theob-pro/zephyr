@@ -18,18 +18,13 @@ cd ${BSIM_OUT_PATH}/bin
 
 Execute ./bs_2G4_phy_v1 \
     -v=${verbosity_level} -s="${simulation_id}" -D=17 -sim_length=${sim_length_us} $@
-Execute "./$dut_exe" \
-    -v=${verbosity_level} -s="${simulation_id}" -d=0 -testid=dut -RealEncryption=1
-# Execute "./$tester_exe" \
-    # -v=${verbosity_level} -s="${simulation_id}" -d=1 -testid=tester -RealEncryption=1 -rs=420
-# Execute "./$tester_exe" \
-    # -v=${verbosity_level} -s="${simulation_id}" -d=2 -testid=tester -RealEncryption=1 -rs=69
-# Execute "./$tester_exe" \
-    # -v=${verbosity_level} -s="${simulation_id}" -d=3 -testid=tester -RealEncryption=1 -rs=13
 
 for i in $(seq 1 16); do
     Execute "./$tester_exe" \
         -v=${verbosity_level} -s="${simulation_id}" -d=${i} -testid=tester -RealEncryption=1 -rs=$(( i * 10 ))
 done
+
+Execute "./$dut_exe" \
+    -v=${verbosity_level} -s="${simulation_id}" -d=0 -testid=dut -RealEncryption=1
 
 wait_for_background_jobs

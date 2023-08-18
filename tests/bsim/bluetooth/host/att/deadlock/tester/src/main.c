@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2023 Nordic Semiconductor ASA
  *
@@ -28,7 +27,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	if (conn_err) {
-		FAIL("Failed to connect to %s (%u)", addr, conn_err);
+		FAIL("Failed to connect to %s (%u)\n", addr, conn_err);
 		return;
 	}
 
@@ -66,8 +65,7 @@ static void adv(void)
 	LOG_DBG("Waiting for Central...");
 }
 
-static uint8_t gatt_read_cb(struct bt_conn *conn, uint8_t err,
-			    struct bt_gatt_read_params *params,
+static uint8_t gatt_read_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_read_params *params,
 			    const void *data, uint16_t length)
 {
 	if (err != BT_ATT_ERR_SUCCESS) {
@@ -83,7 +81,7 @@ static uint8_t gatt_read_cb(struct bt_conn *conn, uint8_t err,
 	return 0;
 }
 
-static void gatt_read(uint16_t handle)
+static void gatt_read(void)
 {
 	static struct bt_gatt_read_params read_params;
 	int err;
@@ -91,9 +89,9 @@ static void gatt_read(uint16_t handle)
 	printk("Reading chrc\n");
 
 	read_params.func = gatt_read_cb;
-	read_params.handle_count = 1;
-	read_params.single.handle = handle;
-	read_params.single.offset = 0;
+	read_params.by_uuid.start_handle = 0x0001;
+	read_params.by_uuid.end_handle = 0xffff;
+	read_params.by_uuid.uuid = test_characteristic_uuid;
 
 	UNSET_FLAG(flag_read_complete);
 
@@ -115,11 +113,12 @@ void test_procedure_tester(void)
 	ASSERT(err == 0, "Can't enable Bluetooth (err %d)\n", err);
 	LOG_DBG("Tester Bluetooth initialized.");
 
-	adv(); // TODO read from GATT
+	adv();
 	WAIT_FOR_FLAG(is_connected);
 
-	int handle = 18; // trust me
-	gatt_read(handle);
+	k_sleep(K_SECONDS(5));
+
+	gatt_read();
 
 	WAIT_FOR_FLAG_UNSET(is_connected);
 
@@ -157,7 +156,6 @@ static struct bst_test_list *install(struct bst_test_list *tests)
 };
 
 bst_test_install_t test_installers[] = {install, NULL};
-
 
 int main(void)
 {

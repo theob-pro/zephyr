@@ -15,37 +15,42 @@ extern enum bst_result_t bst_result;
 
 #define DECLARE_FLAG(flag) extern atomic_t flag
 #define DEFINE_FLAG(flag)  atomic_t flag = (atomic_t) false
-#define SET_FLAG(flag)	   (void)atomic_set(&flag, (atomic_t) true)
+#define SET_FLAG(flag)     (void)atomic_set(&flag, (atomic_t) true)
 #define UNSET_FLAG(flag)   (void)atomic_set(&flag, (atomic_t) false)
 
-#define WAIT_FOR_FLAG(flag)			\
-	while (!(bool)atomic_get(&flag)) {	\
-		(void)k_sleep(K_MSEC(1));	\
+#define WAIT_FOR_FLAG(flag)                                                                        \
+	while (!(bool)atomic_get(&flag)) {                                                         \
+		(void)k_sleep(K_MSEC(1));                                                          \
 	}
-#define WAIT_FOR_FLAG_UNSET(flag)		\
-	while ((bool)atomic_get(&flag)) {	\
-		(void)k_sleep(K_MSEC(1));	\
+#define WAIT_FOR_FLAG_UNSET(flag)                                                                  \
+	while ((bool)atomic_get(&flag)) {                                                          \
+		(void)k_sleep(K_MSEC(1));                                                          \
 	}
-#define TAKE_FLAG(flag)					\
-	while (!(bool)atomic_cas(&flag, true, false)) {	\
-		(void)k_sleep(K_MSEC(1));		\
+#define TAKE_FLAG(flag)                                                                            \
+	while (!(bool)atomic_cas(&flag, true, false)) {                                            \
+		(void)k_sleep(K_MSEC(1));                                                          \
 	}
 
-#define ASSERT(expr, ...)			\
-	do {					\
-		if (!(expr)) {			\
-			FAIL(__VA_ARGS__);	\
-		}				\
+#define ASSERT(expr, ...)                                                                          \
+	do {                                                                                       \
+		if (!(expr)) {                                                                     \
+			FAIL(__VA_ARGS__);                                                         \
+		}                                                                                  \
 	} while (0)
 
-#define FAIL(...)					\
-	do {						\
-		bst_result = Failed;			\
-		bs_trace_error_time_line(__VA_ARGS__);	\
+#define FAIL(...)                                                                                  \
+	do {                                                                                       \
+		bst_result = Failed;                                                               \
+		bs_trace_error_time_line(__VA_ARGS__);                                             \
 	} while (0)
 
-#define PASS(...)					\
-	do {						\
-		bst_result = Passed;			\
-		bs_trace_info_time(1, __VA_ARGS__);	\
+#define PASS(...)                                                                                  \
+	do {                                                                                       \
+		bst_result = Passed;                                                               \
+		bs_trace_info_time(1, __VA_ARGS__);                                                \
 	} while (0)
+
+#define test_service_uuid                                                                          \
+	BT_UUID_DECLARE_128(BT_UUID_128_ENCODE(0xf0debc9a, 0x7856, 0x3412, 0x7856, 0x341278563412))
+#define test_characteristic_uuid                                                                   \
+	BT_UUID_DECLARE_128(BT_UUID_128_ENCODE(0xf2debc9a, 0x7856, 0x3412, 0x7856, 0x341278563412))

@@ -18,28 +18,6 @@ LOG_MODULE_REGISTER(dut, LOG_LEVEL_DBG);
 
 DEFINE_FLAG(is_connected);
 
-
-static struct bt_uuid_128 test_service_uuid =
-	BT_UUID_INIT_128(0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12,
-			 0x78, 0x56, 0x34, 0x12);
-static struct bt_uuid_128 test_characteristic_uuid =
-	BT_UUID_INIT_128(0xf2, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12,
-			 0x78, 0x56, 0x34, 0x12);
-
-
-static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-				    void *buf, uint16_t len, uint16_t offset);
-
-static struct bt_gatt_attr test_attributes[] = {
-	BT_GATT_PRIMARY_SERVICE(&test_service_uuid),
-	BT_GATT_CHARACTERISTIC(&test_characteristic_uuid.uuid, BT_GATT_CHRC_READ, BT_GATT_PERM_READ,
-			       test_on_attr_read_cb, NULL, NULL),
-};
-
-static struct bt_gatt_service test_gatt_service = BT_GATT_SERVICE(test_attributes);
-
-static uint16_t test_attribute_handle;
-
 static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 				    void *buf, uint16_t len, uint16_t offset)
 {
@@ -54,6 +32,10 @@ static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_a
 
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, "data", 4);
 }
+
+BT_GATT_SERVICE_DEFINE(test_gatt_service, BT_GATT_PRIMARY_SERVICE(test_service_uuid),
+		       BT_GATT_CHARACTERISTIC(test_characteristic_uuid, BT_GATT_CHRC_READ,
+					      BT_GATT_PERM_READ, test_on_attr_read_cb, NULL, NULL));
 
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
@@ -151,14 +133,6 @@ void test_procedure_0(void)
 	LOG_DBG("Deadlock DUT/central started*");
 	int err;
 
-
-
-	err = bt_gatt_service_register(&test_gatt_service);
-	__ASSERT_NO_MSG(err == 0);
-
-	test_attribute_handle = test_attributes[2].handle;
-	LOG_ERR("test_attr: %u", test_attribute_handle);
-
 	err = bt_enable(NULL);
 	ASSERT(err == 0, "Can't enable Bluetooth (err %d)\n", err);
 	LOG_DBG("Central Bluetooth initialized.");
@@ -209,8 +183,6 @@ bst_test_install_t test_installers[] = {install, NULL};
 int main(void)
 {
 	bst_main();
-
-
 
 	return 0;
 }
