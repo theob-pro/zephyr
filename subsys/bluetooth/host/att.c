@@ -678,7 +678,7 @@ static struct net_buf *bt_att_chan_create_pdu(struct bt_att_chan *chan, uint8_t 
 		re_use = true;
 		break;
 	default:
-		timeout = K_FOREVER;
+		timeout = K_FOREVER; // la aussi
 	}
 
 	if (IS_ENABLED(CONFIG_BT_GATT_READ_MULTIPLE) &&

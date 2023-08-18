@@ -2778,7 +2778,7 @@ static void hci_tx_thread(void *p1, void *p2, void *p3)
 
 		LOG_DBG("Calling k_poll with %d events", ev_count);
 
-		err = k_poll(events, ev_count, K_FOREVER);
+		err = k_poll(events, ev_count, K_FOREVER); // la
 		BT_ASSERT(err == 0);
 
 		process_events(events, ev_count);

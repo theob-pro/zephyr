@@ -115,6 +115,7 @@ struct net_buf *bt_iso_create_pdu_timeout_debug(struct net_buf_pool *pool,
 	bt_iso_create_pdu_timeout_debug(_pool, _reserve, _timeout, \
 					__func__, __LINE__)
 
+// et peutetre la aussi
 #define bt_iso_create_pdu(_pool, _reserve) \
 	bt_iso_create_pdu_timeout_debug(_pool, _reserve, K_FOREVER, \
 					__func__, __line__)

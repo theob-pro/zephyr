@@ -381,6 +381,7 @@ struct net_buf *bt_conn_create_pdu_timeout_debug(struct net_buf_pool *pool,
 	bt_conn_create_pdu_timeout_debug(_pool, _reserve, _timeout, \
 					 __func__, __LINE__)
 
+// et la aussi
 #define bt_conn_create_pdu(_pool, _reserve) \
 	bt_conn_create_pdu_timeout_debug(_pool, _reserve, K_FOREVER, \
 					 __func__, __line__)
