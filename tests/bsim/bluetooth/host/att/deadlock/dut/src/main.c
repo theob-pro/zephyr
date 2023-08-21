@@ -8,6 +8,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/l2cap.h>
+#include <zephyr/bluetooth/att.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/conn.h>
@@ -40,6 +41,7 @@ BT_GATT_SERVICE_DEFINE(test_gatt_service, BT_GATT_PRIMARY_SERVICE(test_service_u
 		       BT_GATT_CHARACTERISTIC(test_characteristic_uuid, BT_GATT_CHRC_READ,
 					      BT_GATT_PERM_READ, test_on_attr_read_cb, NULL, NULL));
 
+static struct bt_conn *dconn;
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -56,6 +58,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 	int err = bt_conn_set_security(conn, BT_SECURITY_L2);
 	__ASSERT_NO_MSG(err == 0);
 
+	dconn = bt_conn_ref(conn);
 	SET_FLAG(is_connected);
 }
 
@@ -67,6 +70,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	LOG_DBG("%p %s (reason 0x%02x)", conn, addr, reason);
 
+	bt_conn_unref(dconn);
 	UNSET_FLAG(is_connected);
 }
 
@@ -130,6 +134,13 @@ static void connect(void)
 	LOG_DBG("Central initiating connection...");
 	WAIT_FOR_FLAG(is_connected);
 	WAIT_FOR_FLAG(is_secured);
+
+	LOG_DBG("Central EATTing...");
+
+	while (bt_eatt_count(dconn) < 15) {
+		k_msleep(100);
+	}
+	LOG_ERR("Central EATT-ed...");
 }
 
 static void disconnect_device(struct bt_conn *conn, void *data)
