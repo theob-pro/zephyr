@@ -7,10 +7,10 @@ project(bsim_test_deadlock_dut)
 
 target_sources(app PRIVATE
   src/main.c
-  )
+)
 
 zephyr_include_directories(
   ../common/
   ${BSIM_COMPONENTS_PATH}/libUtilv1/src/
   ${BSIM_COMPONENTS_PATH}/libPhyComv1/src/
-  )
+)

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdio.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
@@ -12,36 +14,58 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/conn.h>
+
 #include "utils.h"
 #include "bstests.h"
-#include <stdio.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(dut, LOG_LEVEL_DBG);
 
 DEFINE_FLAG(is_connected);
 DEFINE_FLAG(is_secured);
-
-static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-				    void *buf, uint16_t len, uint16_t offset)
-{
-	/* Do not respond until allowed */
-	static int i = 0;
-	if (!i) {
-		LOG_DBG("Sleeping");
-		k_sleep(K_SECONDS(20));
-	}
-
-	LOG_ERR("handled read %i", i++);
-
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, "data", 4);
-}
-
-BT_GATT_SERVICE_DEFINE(test_gatt_service, BT_GATT_PRIMARY_SERVICE(test_service_uuid),
-		       BT_GATT_CHARACTERISTIC(test_characteristic_uuid, BT_GATT_CHRC_READ,
-					      BT_GATT_PERM_READ, test_on_attr_read_cb, NULL, NULL));
+DEFINE_FLAG(flag_read_complete);
 
 static struct bt_conn *dconn;
+
+static uint8_t gatt_read_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_read_params *params,
+			    const void *data, uint16_t length)
+{
+	if (err != BT_ATT_ERR_SUCCESS) {
+		FAIL("Read failed: 0x%02X\n", err);
+	}
+
+	LOG_HEXDUMP_DBG(data, length, "Read data:");
+
+	SET_FLAG(flag_read_complete);
+
+	// bt_conn_unref(dconn);
+
+	return 0;
+}
+
+static void gatt_read(void)
+{
+	static struct bt_gatt_read_params read_params;
+	int err;
+
+	printk("Reading chrc\n");
+
+	read_params.func = gatt_read_cb;
+	read_params.by_uuid.start_handle = 0x0001;
+	read_params.by_uuid.end_handle = 0xffff;
+	read_params.by_uuid.uuid = test_characteristic_uuid;
+
+	UNSET_FLAG(flag_read_complete);
+
+	err = bt_gatt_read(dconn, &read_params);
+	if (err != 0) {
+		FAIL("bt_gatt_read failed: %d\n", err);
+	}
+
+	// WAIT_FOR_FLAG(flag_read_complete);
+	printk("success\n");
+}
+
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
@@ -169,9 +193,17 @@ void test_procedure_0(void)
 		connect();
 	}
 
-	k_sleep(K_SECONDS(60));
+	LOG_INF("===== ALL CONNECTED =====");
 
-	bt_conn_foreach(BT_CONN_TYPE_LE, disconnect_device, NULL);
+	for (int i = 0; i < CONFIG_BT_EATT_MAX; i++) {
+		gatt_read();
+	}
+
+	LOG_INF("===== ALL READ SEND =====");
+
+	k_sleep(K_SECONDS(30));
+
+	// bt_conn_foreach(BT_CONN_TYPE_LE, disconnect_device, NULL);
 
 	PASS("DUT done\n");
 }
