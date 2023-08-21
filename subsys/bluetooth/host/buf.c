@@ -50,9 +50,25 @@ NET_BUF_POOL_FIXED_DEFINE(evt_pool, CONFIG_BT_BUF_EVT_RX_COUNT,
 			  BT_BUF_EVT_RX_SIZE, 8,
 			  NULL);
 #else
+
+
+#include "zephyr/logging/log.h"
+LOG_MODULE_REGISTER(bt_buf, LOG_LEVEL_DBG);
+
+
+void destroyd(struct net_buf *buf)
+{
+
+#if defined(CONFIG_NET_BUF_POOL_USAGE)
+	struct net_buf_pool *p = net_buf_pool_get(buf->pool_id);
+	LOG_INF("destroy %s (in-use %d / %d)", p->name, p->buf_count - p->avail_count, p->buf_count);
+#endif
+	net_buf_destroy(buf);
+}
+
 NET_BUF_POOL_FIXED_DEFINE(hci_rx_pool, BT_BUF_RX_COUNT,
 			  BT_BUF_RX_SIZE, CONFIG_BT_CONN_TX_USER_DATA_SIZE,
-			  NULL);
+			  destroyd);
 #endif /* CONFIG_BT_HCI_ACL_FLOW_CONTROL */
 
 struct net_buf *bt_buf_get_rx(enum bt_buf_type type, k_timeout_t timeout)

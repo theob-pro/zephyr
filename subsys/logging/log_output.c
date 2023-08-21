@@ -338,6 +338,10 @@ static int ids_print(const struct log_output *output,
 	if (domain) {
 		total += print_formatted(output, "%s/", domain);
 	}
+	/* hack: add thread name */
+       #if defined(CONFIG_THREAD_NAME)
+       total += print_formatted(output, "[%s] ", k_thread_name_get(k_current_get()));
+       #endif
 
 	if (source) {
 		total += print_formatted(output,
