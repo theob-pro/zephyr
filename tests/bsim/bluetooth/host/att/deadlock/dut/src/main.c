@@ -195,6 +195,8 @@ void test_procedure_0(void)
 
 	LOG_INF("===== ALL CONNECTED =====");
 
+	k_msleep(5000);
+
 	for (int i = 0; i < CONFIG_BT_EATT_MAX; i++) {
 		gatt_read();
 	}
