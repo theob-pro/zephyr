@@ -10,13 +10,16 @@
 #include <zephyr/bluetooth/l2cap.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/bluetooth/conn.h>
 #include "utils.h"
 #include "bstests.h"
+#include <stdio.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(dut, LOG_LEVEL_DBG);
 
 DEFINE_FLAG(is_connected);
+DEFINE_FLAG(is_secured);
 
 static ssize_t test_on_attr_read_cb(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 				    void *buf, uint16_t len, uint16_t offset)
@@ -50,6 +53,9 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 
 	LOG_DBG("%s", addr);
 
+	int err = bt_conn_set_security(conn, BT_SECURITY_L2);
+	__ASSERT_NO_MSG(err == 0);
+
 	SET_FLAG(is_connected);
 }
 
@@ -64,9 +70,18 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	UNSET_FLAG(is_connected);
 }
 
+void secured(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	LOG_DBG("%p level %d err %d", conn, level, err);
+
+	__ASSERT_NO_MSG(err == 0);
+	SET_FLAG(is_secured);
+}
+
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
 	.disconnected = disconnected,
+	.security_changed = secured,
 };
 
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
@@ -105,6 +120,7 @@ static void connect(void)
 		.window = BT_GAP_SCAN_FAST_WINDOW,
 	};
 
+	UNSET_FLAG(is_secured);
 	UNSET_FLAG(is_connected);
 
 	int err = bt_le_scan_start(&scan_param, device_found);
@@ -113,6 +129,7 @@ static void connect(void)
 
 	LOG_DBG("Central initiating connection...");
 	WAIT_FOR_FLAG(is_connected);
+	WAIT_FOR_FLAG(is_secured);
 }
 
 static void disconnect_device(struct bt_conn *conn, void *data)
