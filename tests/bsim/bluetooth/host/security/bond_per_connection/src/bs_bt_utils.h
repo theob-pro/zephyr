@@ -78,7 +78,6 @@ void clear_g_conn(void);
 void bs_bt_utils_setup(void);
 void scan_connect_to_first_result(void);
 void disconnect(void);
-void unpair(int id);
 void set_security(bt_security_t sec);
 void advertise_connectable(int id, bt_addr_le_t *directed_dst);
 void set_bondable(bool enable);

@@ -2,19 +2,12 @@
 # Copyright 2023 Nordic Semiconductor ASA
 # SPDX-License-Identifier: Apache-2.0
 
-set -eu
-bash_source_dir="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+# Terminate running simulations (if any)
+${BSIM_COMPONENTS_PATH}/common/stop_bsim.sh
 
-# Read variable definitions output by _env.sh
-source "${bash_source_dir}/_env.sh"
+# Define the executable name
+bsim_exe=bs_nrf52_bsim_tests_bsim_bluetooth_host_security_bond_per_connection_prj_conf
 
-: "${BSIM_COMPONENTS_PATH:?BSIM_COMPONENTS_PATH must be defined}"
-: "${ZEPHYR_BASE:?ZEPHYR_BASE must be defined}"
-
-WORK_DIR="${WORK_DIR:-${ZEPHYR_BASE}/bsim_out}"
-BOARD="${BOARD:-nrf52_bsim}"
-BOARD_ROOT="${BOARD_ROOT:-${ZEPHYR_BASE}}"
-INCR_BUILD=1
-mkdir -p ${WORK_DIR}
-source ${ZEPHYR_BASE}/tests/bsim/compile.source
-app="tests/bsim/bluetooth/$test_name" compile
+# Build the project and copy the executable to the output directory
+west build -b nrf52_bsim && \
+    cp build/zephyr/zephyr.exe ${BSIM_OUT_PATH}/bin/${bsim_exe}

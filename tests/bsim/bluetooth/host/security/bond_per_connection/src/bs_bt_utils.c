@@ -6,6 +6,10 @@
 
 #include "bs_bt_utils.h"
 
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(bs_bt_utils, LOG_LEVEL_DBG);
+
 BUILD_ASSERT(CONFIG_BT_MAX_PAIRED >= 2, "CONFIG_BT_MAX_PAIRED is too small.");
 BUILD_ASSERT(CONFIG_BT_ID_MAX >= 3, "CONFIG_BT_ID_MAX is too small.");
 
@@ -62,15 +66,32 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 
 	SET_FLAG(flag_is_connected);
+}
 
-	if (GET_FLAG(call_bt_conn_set_bondable) && bt_conn_set_bondable(conn, GET_FLAG(bondable))) {
-		ASSERT(0, "Fail during setting bondable flag for given connection.");
-	}
+static void unpair(void)
+{
+	int err;
+
+	err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+	ASSERT(!err, "Err bt_unpair %d", err);
+}
+
+DEFINE_FLAG(flag_security_changed);
+
+static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	SET_FLAG(flag_security_changed);
+
+	/* Try to trigger fault here */
+	LOG_DBG("unpairing");
+	unpair();
+	LOG_DBG("unpaired");
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
 	.disconnected = disconnected,
+	.security_changed = security_changed,
 };
 
 void clear_g_conn(void)
@@ -90,8 +111,15 @@ DEFINE_FLAG(flag_not_bonded);
 
 static void pairing_complete(struct bt_conn *conn, bool bonded)
 {
+	LOG_DBG("pairing complete");
 	SET_FLAG(flag_pairing_complete);
 
+	if (bonded) {
+		LOG_DBG("Bonded status: true");
+	} else {
+		LOG_DBG("Bonded status: false");
+	}
+	
 	if (bonded) {
 		SET_FLAG(flag_bonded);
 	} else {
@@ -154,14 +182,6 @@ void disconnect(void)
 	ASSERT(!err, "Err bt_conn_disconnect %d", err);
 }
 
-void unpair(int id)
-{
-	int err;
-
-	err = bt_unpair(id, BT_ADDR_LE_ANY);
-	ASSERT(!err, "Err bt_unpair %d", err);
-}
-
 void set_security(bt_security_t sec)
 {
 	int err;
@@ -188,22 +208,4 @@ void advertise_connectable(int id, bt_addr_le_t *directed_dst)
 
 	err = bt_le_adv_start(&param, NULL, 0, NULL, 0);
 	ASSERT(err == 0, "Advertising failed to start (err %d)\n", err);
-}
-
-void set_bondable(bool enable)
-{
-	if (enable) {
-		SET_FLAG(bondable);
-	} else {
-		UNSET_FLAG(bondable);
-	}
-}
-
-void enable_bt_conn_set_bondable(bool enable)
-{
-	if (enable) {
-		SET_FLAG(call_bt_conn_set_bondable);
-	} else {
-		UNSET_FLAG(call_bt_conn_set_bondable);
-	}
 }
