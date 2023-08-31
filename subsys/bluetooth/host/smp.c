@@ -1650,11 +1650,14 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 
 	LOG_DBG("got status 0x%x", status);
 
-	if (conn->state != BT_CONN_CONNECTED) {
-		/* If disconnection has been triggered in between the security update
-		 * and the call to this function we need to abort the pairing.
+	if (conn->le.keys == NULL) {
+	// if (conn->state != BT_CONN_CONNECTED) {		
+		/* If the bonding information has been cleared 
+		 * before pairing had a chance to complete
+		 * (probably by the application), indicate this by setting 
+		 * an appropriate log message.
 		 */
-		LOG_WRN("Not connected!");
+		LOG_WRN("The in-progress pairing has been deleted.");
 		status = BT_SMP_ERR_UNSPECIFIED;
 	}
 
@@ -1677,7 +1680,8 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 			bt_keys_show_sniffer_info(conn->le.keys, NULL);
 		}
 
-		if (bond_flag) {
+		if (bond_flag && conn->le.keys) {
+			LOG_ERR("store the keys %p", conn->le.keys);
 			bt_keys_store(conn->le.keys);
 		}
 
@@ -1697,6 +1701,7 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 		if (conn->le.keys &&
 		    (!conn->le.keys->enc_size ||
 		     atomic_test_bit(smp->flags, SMP_FLAG_KEYS_DISTR))) {
+			LOG_ERR("clear them keys %p", conn->le.keys);
 			bt_keys_clear(conn->le.keys);
 			conn->le.keys = NULL;
 		}
@@ -1725,7 +1730,7 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 
 	smp_reset(smp);
 
-	if (conn->state == BT_CONN_CONNECTED && conn->sec_level != conn->required_sec_level) {
+	if (/* conn->state == BT_CONN_CONNECTED && */conn->sec_level != conn->required_sec_level) {
 		bt_smp_start_security(conn);
 	}
 }
@@ -4566,7 +4571,7 @@ static void bt_smp_disconnected(struct bt_l2cap_chan *chan)
 	struct bt_smp *smp = CONTAINER_OF(chan, struct bt_smp, chan.chan);
 	struct bt_keys *keys = chan->conn->le.keys;
 
-	LOG_DBG("chan %p cid 0x%04x", chan,
+	LOG_ERR("chan %p cid 0x%04x", chan,
 		CONTAINER_OF(chan, struct bt_l2cap_le_chan, chan)->tx.cid);
 
 	/* Channel disconnected callback is always called from a work handler

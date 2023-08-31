@@ -14,12 +14,14 @@
 
 BUILD_ASSERT(CONFIG_BT_BONDABLE, "CONFIG_BT_BONDABLE must be enabled by default.");
 
+extern void set_central(void);
 void central(void)
 {
+	set_central();
 	bs_bt_utils_setup();
 
 	printk("== Bonding id a - global bondable mode ==\n");
-	
+
 	scan_connect_to_first_result();
 	wait_connected();
 	set_security(BT_SECURITY_L2);

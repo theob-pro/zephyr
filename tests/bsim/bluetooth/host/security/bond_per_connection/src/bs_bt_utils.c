@@ -7,6 +7,7 @@
 #include "bs_bt_utils.h"
 
 #include <zephyr/logging/log.h>
+#include <zephyr/settings/settings.h>
 
 LOG_MODULE_REGISTER(bs_bt_utils, LOG_LEVEL_DBG);
 
@@ -68,23 +69,28 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	SET_FLAG(flag_is_connected);
 }
 
-static void unpair(void)
-{
-	int err;
-
-	err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
-	ASSERT(!err, "Err bt_unpair %d", err);
-}
-
 DEFINE_FLAG(flag_security_changed);
+
+static bool _central = false;
+void set_central(void) 
+{
+	_central = true;
+}
 
 static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
 {
+	LOG_DBG("security changed");
 	SET_FLAG(flag_security_changed);
 
+	if (_central) {
+		return;
+	}
+
 	/* Try to trigger fault here */
-	LOG_DBG("unpairing");
-	unpair();
+	k_msleep(2000);
+	LOG_ERR("do bad");
+	// bt_unpair(BT_ID_DEFAULT, bt_conn_get_dst(conn));
+	bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 	LOG_DBG("unpaired");
 }
 
@@ -111,7 +117,7 @@ DEFINE_FLAG(flag_not_bonded);
 
 static void pairing_complete(struct bt_conn *conn, bool bonded)
 {
-	LOG_DBG("pairing complete");
+	LOG_ERR("pairing complete");
 	SET_FLAG(flag_pairing_complete);
 
 	if (bonded) {
@@ -127,8 +133,16 @@ static void pairing_complete(struct bt_conn *conn, bool bonded)
 	}
 }
 
+DEFINE_FLAG(flag_pairing_failed);
+
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err err)
+{
+	ASSERT(0, "oh no!\n");
+}
+
 static struct bt_conn_auth_info_cb bt_conn_auth_info_cb = {
-	.pairing_complete = pairing_complete,
+	.pairing_complete = pairing_complete,	
+	.pairing_failed = pairing_failed,
 };
 
 void bs_bt_utils_setup(void)
@@ -139,6 +153,11 @@ void bs_bt_utils_setup(void)
 	ASSERT(!err, "bt_enable failed.\n");
 	err = bt_conn_auth_info_cb_register(&bt_conn_auth_info_cb);
 	ASSERT(!err, "bt_conn_auth_info_cb_register failed.\n");
+
+	err = settings_load();
+	if (err) {
+		FAIL("Settings load failed (err %d)\n", err);
+	}
 }
 
 static void scan_connect_to_first_result__device_found(const bt_addr_le_t *addr, int8_t rssi,
