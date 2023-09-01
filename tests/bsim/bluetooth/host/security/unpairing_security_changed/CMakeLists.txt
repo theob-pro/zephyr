@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-project(bsim_test_multi_id_bond_per_connection)
+project(bsim_test_unpairing_security_changed)
 
 target_sources(app PRIVATE
 	src/bs_bt_utils.c
@@ -15,4 +15,4 @@ target_sources(app PRIVATE
 zephyr_include_directories(
   ${BSIM_COMPONENTS_PATH}/libUtilv1/src/
   ${BSIM_COMPONENTS_PATH}/libPhyComv1/src/
-  )
+)

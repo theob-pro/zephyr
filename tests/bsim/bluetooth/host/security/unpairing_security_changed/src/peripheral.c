@@ -4,53 +4,70 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "bs_bt_utils.h"
-#include "zephyr/bluetooth/addr.h"
-#include "zephyr/bluetooth/bluetooth.h"
-#include "zephyr/bluetooth/conn.h"
-#include "zephyr/toolchain/gcc.h"
-
 #include <stdint.h>
 #include <string.h>
 
+#include <zephyr/logging/log.h>
+#include <zephyr/toolchain/gcc.h>
+#include <zephyr/bluetooth/addr.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/bluetooth.h>
+
+#include "bs_bt_utils.h"
+
+LOG_MODULE_REGISTER(test_peripheral, LOG_LEVEL_DBG);
+
+BUILD_ASSERT(CONFIG_BT_BONDABLE, "CONFIG_BT_BONDABLE must be enabled by default.");
+
+static bool unpair = false;
+
+static void peripheral_security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	/* Try to trigger fault here */
+	k_msleep(2000);
+	LOG_ERR("do bad");
+	if (unpair) {
+		bt_unpair(BT_ID_DEFAULT, bt_conn_get_dst(conn));
+		LOG_DBG("unpaired");
+	} else {
+		bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+	}
+}
+
 void peripheral(void)
 {
+	LOG_DBG("===== Peripheral =====");
+
+	struct bt_conn_cb peripheral_cb = {};
+
+	peripheral_cb.security_changed = peripheral_security_changed;
+
 	bs_bt_utils_setup();
 
-	int id_a;
-	int id_b;
+	bt_conn_cb_register(&peripheral_cb);
 
-	id_a = bt_id_create(NULL, NULL);
-	ASSERT(id_a >= 0, "bt_id_create id_a failed (err %d)\n", id_a);
+	LOG_DBG("Peripheral security changed callback set");
 
-	id_b = bt_id_create(NULL, NULL);
-	ASSERT(id_b >= 0, "bt_id_create id_b failed (err %d)\n", id_b);
+	/* Disconnect in the security changed callback */
 
-	printk("== Bonding id a - global bondable mode ==\n");
-	BUILD_ASSERT(CONFIG_BT_BONDABLE, "CONFIG_BT_BONDABLE must be enabled by default.");
-	enable_bt_conn_set_bondable(false);
-	advertise_connectable(id_a, NULL);
+	advertise_connectable(BT_ID_DEFAULT, NULL);
 	wait_connected();
-	/* Central should bond here and trigger a disconnect. */
+
 	wait_disconnected();
-	unpair(id_a);
+
 	clear_g_conn();
+	bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
 
-	printk("== Bonding id a - bond per-connection true ==\n");
-	enable_bt_conn_set_bondable(true);
-	set_bondable(true);
-	advertise_connectable(id_a, NULL);
+	/* Call `bt_unpair` in security changed callback */
+
+	unpair = true;
+
+	advertise_connectable(BT_ID_DEFAULT, NULL);
 	wait_connected();
-	/* Central should bond here and trigger a disconnect. */
+
 	wait_disconnected();
+
 	clear_g_conn();
-
-	printk("== Bonding id b - bond per-connection false ==\n");
-	set_bondable(false);
-	advertise_connectable(id_b, NULL);
-	wait_connected();
-	/* Central should pair without bond here and trigger a disconnect. */
-	wait_disconnected();
 
 	PASS("PASS\n");
 }

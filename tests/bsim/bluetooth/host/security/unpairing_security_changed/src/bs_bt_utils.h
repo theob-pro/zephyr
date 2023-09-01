@@ -9,8 +9,6 @@
 #include "bs_tracing.h"
 #include "bs_types.h"
 #include "bstests.h"
-#include "time_machine.h"
-#include "zephyr/sys/__assert.h"
 
 #include <errno.h>
 #include <stddef.h>
@@ -78,8 +76,6 @@ void clear_g_conn(void);
 void bs_bt_utils_setup(void);
 void scan_connect_to_first_result(void);
 void disconnect(void);
-void unpair(int id);
 void set_security(bt_security_t sec);
 void advertise_connectable(int id, bt_addr_le_t *directed_dst);
 void set_bondable(bool enable);
-void enable_bt_conn_set_bondable(bool enable);

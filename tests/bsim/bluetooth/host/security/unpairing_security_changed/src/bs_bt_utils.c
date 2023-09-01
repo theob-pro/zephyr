@@ -6,8 +6,10 @@
 
 #include "bs_bt_utils.h"
 
-BUILD_ASSERT(CONFIG_BT_MAX_PAIRED >= 2, "CONFIG_BT_MAX_PAIRED is too small.");
-BUILD_ASSERT(CONFIG_BT_ID_MAX >= 3, "CONFIG_BT_ID_MAX is too small.");
+#include <zephyr/logging/log.h>
+#include <zephyr/settings/settings.h>
+
+LOG_MODULE_REGISTER(bs_bt_utils, LOG_LEVEL_DBG);
 
 #define BS_SECONDS(dur_sec)    ((bs_time_t)dur_sec * 1000000)
 #define TEST_TIMEOUT_SIMULATED BS_SECONDS(60)
@@ -29,11 +31,10 @@ void test_init(void)
 
 DEFINE_FLAG(flag_is_connected);
 struct bt_conn *g_conn;
-DEFINE_FLAG(bondable);
-DEFINE_FLAG(call_bt_conn_set_bondable);
 
 void wait_connected(void)
 {
+	LOG_DBG("Wait for connection...");
 	WAIT_FOR_FLAG(flag_is_connected);
 }
 
@@ -42,12 +43,16 @@ void wait_disconnected(void)
 	WAIT_FOR_FLAG_UNSET(flag_is_connected);
 }
 
+static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	LOG_DBG("security changed");
+}
+
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	UNSET_FLAG(flag_is_connected);
 }
 
-BUILD_ASSERT(CONFIG_BT_MAX_CONN == 1, "This test assumes a single link.");
 static void connected(struct bt_conn *conn, uint8_t err)
 {
 	ASSERT((!g_conn || (conn == g_conn)), "Unexpected new connection.");
@@ -62,15 +67,12 @@ static void connected(struct bt_conn *conn, uint8_t err)
 	}
 
 	SET_FLAG(flag_is_connected);
-
-	if (GET_FLAG(call_bt_conn_set_bondable) && bt_conn_set_bondable(conn, GET_FLAG(bondable))) {
-		ASSERT(0, "Fail during setting bondable flag for given connection.");
-	}
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.connected = connected,
 	.disconnected = disconnected,
+	.security_changed = security_changed,
 };
 
 void clear_g_conn(void)
@@ -90,7 +92,14 @@ DEFINE_FLAG(flag_not_bonded);
 
 static void pairing_complete(struct bt_conn *conn, bool bonded)
 {
+	LOG_ERR("pairing complete");
 	SET_FLAG(flag_pairing_complete);
+
+	if (bonded) {
+		LOG_DBG("Bonded status: true");
+	} else {
+		LOG_DBG("Bonded status: false");
+	}
 
 	if (bonded) {
 		SET_FLAG(flag_bonded);
@@ -99,8 +108,16 @@ static void pairing_complete(struct bt_conn *conn, bool bonded)
 	}
 }
 
+DEFINE_FLAG(flag_pairing_failed);
+
+static void pairing_failed(struct bt_conn *conn, enum bt_security_err err)
+{
+	LOG_ERR("Pairing failed");
+}
+
 static struct bt_conn_auth_info_cb bt_conn_auth_info_cb = {
 	.pairing_complete = pairing_complete,
+	.pairing_failed = pairing_failed,
 };
 
 void bs_bt_utils_setup(void)
@@ -111,6 +128,11 @@ void bs_bt_utils_setup(void)
 	ASSERT(!err, "bt_enable failed.\n");
 	err = bt_conn_auth_info_cb_register(&bt_conn_auth_info_cb);
 	ASSERT(!err, "bt_conn_auth_info_cb_register failed.\n");
+
+	err = settings_load();
+	if (err) {
+		FAIL("Settings load failed (err %d)\n", err);
+	}
 }
 
 static void scan_connect_to_first_result__device_found(const bt_addr_le_t *addr, int8_t rssi,
@@ -154,14 +176,6 @@ void disconnect(void)
 	ASSERT(!err, "Err bt_conn_disconnect %d", err);
 }
 
-void unpair(int id)
-{
-	int err;
-
-	err = bt_unpair(id, BT_ADDR_LE_ANY);
-	ASSERT(!err, "Err bt_unpair %d", err);
-}
-
 void set_security(bt_security_t sec)
 {
 	int err;
@@ -188,22 +202,4 @@ void advertise_connectable(int id, bt_addr_le_t *directed_dst)
 
 	err = bt_le_adv_start(&param, NULL, 0, NULL, 0);
 	ASSERT(err == 0, "Advertising failed to start (err %d)\n", err);
-}
-
-void set_bondable(bool enable)
-{
-	if (enable) {
-		SET_FLAG(bondable);
-	} else {
-		UNSET_FLAG(bondable);
-	}
-}
-
-void enable_bt_conn_set_bondable(bool enable)
-{
-	if (enable) {
-		SET_FLAG(call_bt_conn_set_bondable);
-	} else {
-		UNSET_FLAG(call_bt_conn_set_bondable);
-	}
 }
