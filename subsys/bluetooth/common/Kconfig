@@ -283,6 +283,9 @@ endif # BT_ASSERT
 config BT_MONITOR
 	bool
 
+config BT_BTSNOOP
+	bool "Use BT Snoop format to log HCI traffic in a file"
+
 choice BT_DEBUG_TYPE
 	prompt "Bluetooth debug type"
 	default BT_DEBUG_NONE
