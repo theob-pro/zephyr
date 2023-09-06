@@ -23,9 +23,11 @@
 
 #include <zephyr/bluetooth/buf.h>
 
+#include "btsnoop.h"
+
 #define BTSNOOP_INIT_PRIORITY 60
 
-#define BTSNOOP_FILE_LEN 18
+#define BTSNOOP_FILENAME_LEN 18
 
 struct btsnoop_hdr {
         char id_pattern[8];
@@ -60,9 +62,9 @@ static void btsnoop_write_hdr(void)
 static void btsnoop_init(void)
 {
         pid_t pid = getpid();
-	char filename[BTSNOOP_FILE_LEN]; // log.PID.btsnoop
+	char filename[BTSNOOP_FILENAME_LEN]; // log.PID.btsnoop
 
-	snprintk(filename, BTSNOOP_FILE_LEN, "log.%d.btsnoop", pid);
+	snprintk(filename, BTSNOOP_FILENAME_LEN, "log.%d.btsnoop", pid);
 	printk("filename: %s\n", filename);
 
 	int btsnoop_file_fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, (mode_t)0666);
@@ -94,26 +96,23 @@ static uint64_t btsnoop_ts_get(void)
 
 static uint32_t btsnoop_get_pkt_flags(enum bt_buf_type buf_type)
 {
-        uint32_t flags = 0x00;
-
         switch (buf_type) {
         case BT_BUF_CMD:
+                return 0x02;
         case BT_BUF_EVT:
-                flags = 0x02;
-                break;
+                return 0x03;
         case BT_BUF_ACL_IN:
-        case BT_BUF_ISO_IN:
-                flags = 0x01;
-                break;
-        default:
-                flags = 0x00;
-                break;
+                return 0x00;
+        case BT_BUF_ACL_OUT:
+		return 0x01;
+	case BT_BUF_H4:
+	case BT_BUF_ISO_IN:
+	case BT_BUF_ISO_OUT:
+                return 0xff;
         }
-
-        return flags;
 }
 
-static void btsnoop_write(enum bt_buf_type buf_type, const void *data, size_t len)
+void bt_btsnoop_write(enum bt_buf_type buf_type, const void *data, size_t len)
 {
         struct btsnoop_pkt_record pkt;
 
@@ -139,6 +138,8 @@ static int bt_btsnoop_init()
         IF_ENABLED(CONFIG_BT_BTSNOOP, ({
                 btsnoop_init();
         }))
+
+	return 0;
 }
 
 SYS_INIT(bt_btsnoop_init, PRE_KERNEL_1, BTSNOOP_INIT_PRIORITY);
