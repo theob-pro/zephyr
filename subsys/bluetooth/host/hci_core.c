@@ -35,6 +35,7 @@
 #include "common/rpa.h"
 #include "keys.h"
 #include "monitor.h"
+#include "btsnoop.h"
 #include "hci_core.h"
 #include "hci_ecc.h"
 #include "ecc.h"
@@ -3671,7 +3672,7 @@ int bt_send(struct net_buf *buf)
 	LOG_DBG("buf %p len %u type %u", buf, buf->len, bt_buf_get_type(buf));
 
 	bt_monitor_send(bt_monitor_opcode(buf), buf->data, buf->len);
-	btsnoop_write(buf, buf->data, buf->len);
+	bt_btsnoop_write(bt_btsnoop_get_flag(buf), buf->data, buf->len);
 
 	if (IS_ENABLED(CONFIG_BT_TINYCRYPT_ECC)) {
 		return bt_hci_ecc_send(buf);
@@ -3741,7 +3742,7 @@ static void rx_queue_put(struct net_buf *buf)
 int bt_recv(struct net_buf *buf)
 {
 	bt_monitor_send(bt_monitor_opcode(buf), buf->data, buf->len);
-	btsnoop_write(buf, buf->data, buf->len);
+	bt_btsnoop_write(bt_btsnoop_get_flag(buf), buf->data, buf->len);
 
 	LOG_DBG("buf %p len %u", buf, buf->len);
 
@@ -3793,7 +3794,7 @@ int bt_recv(struct net_buf *buf)
 int bt_recv_prio(struct net_buf *buf)
 {
 	bt_monitor_send(bt_monitor_opcode(buf), buf->data, buf->len);
-	btsnoop_write(buf, buf->data, buf->len);
+	bt_btsnoop_write(bt_btsnoop_get_flag(buf), buf->data, buf->len);
 
 	BT_ASSERT(bt_buf_get_type(buf) == BT_BUF_EVT);
 

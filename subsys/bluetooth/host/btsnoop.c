@@ -4,22 +4,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <cstdint>
-#include <cstring>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
 
+#include <time.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
 #include <zephyr/init.h>
+#include <zephyr/sys/byteorder.h>
 
 #include <zephyr/logging/log_backend.h>
 #include <zephyr/logging/log_output.h>
 #include <zephyr/logging/log_ctrl.h>
 #include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(bt_btsnoop, LOG_LEVEL_DBG);
 
 #include <zephyr/bluetooth/buf.h>
 
@@ -27,7 +30,7 @@
 
 #define BTSNOOP_INIT_PRIORITY 60
 
-#define BTSNOOP_FILENAME_LEN 18
+#define BTSNOOP_FILENAME_LEN 12 + 7 + 1 /* 'log..btsnoop' + '{pid}' + '\n */
 
 struct btsnoop_hdr {
         char id_pattern[8];
@@ -50,24 +53,25 @@ static void btsnoop_write_hdr(void)
         struct btsnoop_hdr hdr;
 
         memcpy(hdr.id_pattern, "btsnoop", 8);
-        hdr.version = 1;
-        hdr.datalink_type = 1002;
+        hdr.version = sys_cpu_to_be32(1);
+        hdr.datalink_type = sys_cpu_to_be32(1001); /* Un-encapsulated HCI (H1). The type of packet is indicated by the flag set. */
 
-        if (write(btsnoop_file_fd, &hdr, sizeof(hdr)) == -1) {
-                close(btsnoop_file_fd);
+        if (write(btsnoop_file_fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
+		close(btsnoop_file_fd);
                 return;
         }
 }
 
 static void btsnoop_init(void)
 {
-        pid_t pid = getpid();
+	LOG_ERR("%s", __func__);
+        pid_t pid = getpid(); // max value 2^22-1, 7 digits
 	char filename[BTSNOOP_FILENAME_LEN]; // log.PID.btsnoop
 
 	snprintk(filename, BTSNOOP_FILENAME_LEN, "log.%d.btsnoop", pid);
 	printk("filename: %s\n", filename);
 
-	int btsnoop_file_fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, (mode_t)0666);
+	btsnoop_file_fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, (mode_t)0666);
 	if (btsnoop_file_fd == -1) {
 		k_oops();
 		return;
@@ -79,48 +83,28 @@ static void btsnoop_init(void)
 static uint64_t btsnoop_ts_get(void)
 {
         uint64_t cycles;
-        const uint64_t cycles_per_s = sys_clock_hw_cycles_per_sec();
-        const uint64_t us_per_s = 1000000llu;
 
-        if (CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER) {
+        if (IS_ENABLED(CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER)) {
                 cycles = k_cycle_get_64();
         } else {
                 cycles = (uint64_t)k_cycle_get_32();
-        }
+	}
 
-        // s = msps * c / cps;
-
-        return us_per_s * cycles / cycles_per_s; /* 1000x precision */
-        // return cycles / (cycles_per_s / us_per_s); /* 1000x range */
+	return k_cyc_to_us_floor64(cycles) + 0x00E03AB44A676000;
 }
 
-static uint32_t btsnoop_get_pkt_flags(enum bt_buf_type buf_type)
-{
-        switch (buf_type) {
-        case BT_BUF_CMD:
-                return 0x02;
-        case BT_BUF_EVT:
-                return 0x03;
-        case BT_BUF_ACL_IN:
-                return 0x00;
-        case BT_BUF_ACL_OUT:
-		return 0x01;
-	case BT_BUF_H4:
-	case BT_BUF_ISO_IN:
-	case BT_BUF_ISO_OUT:
-                return 0xff;
-        }
-}
-
-void bt_btsnoop_write(enum bt_buf_type buf_type, const void *data, size_t len)
+void bt_btsnoop_write(enum bt_btsnoop_flag flag, const void *data, size_t len)
 {
         struct btsnoop_pkt_record pkt;
 
-        pkt.original_len = len;
-        pkt.included_len = len;
-        pkt.flags = btsnoop_get_pkt_flags(buf_type);
-        pkt.drops = 0;
-        pkt.ts = btsnoop_ts_get();
+        pkt.original_len = sys_cpu_to_be32(len);
+        pkt.included_len = sys_cpu_to_be32(len);
+        pkt.flags = sys_cpu_to_be32(flag);
+        pkt.drops = sys_cpu_to_be32(0);
+        pkt.ts = sys_cpu_to_be64(btsnoop_ts_get());
+
+	LOG_ERR("%s", __func__);
+	LOG_HEXDUMP_DBG(data, len, "data:");
 
         if (write(btsnoop_file_fd, &pkt, sizeof(pkt)) == -1) {
                 close(btsnoop_file_fd);
@@ -135,7 +119,7 @@ void bt_btsnoop_write(enum bt_buf_type buf_type, const void *data, size_t len)
 
 static int bt_btsnoop_init()
 {
-        IF_ENABLED(CONFIG_BT_BTSNOOP, ({
+	IF_ENABLED(CONFIG_BT_BTSNOOP, ({
                 btsnoop_init();
         }))
 
