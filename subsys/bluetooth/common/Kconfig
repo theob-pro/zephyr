@@ -284,7 +284,16 @@ config BT_MONITOR
 	bool
 
 config BT_BTSNOOP
+	bool
+
+config BT_BTSNOOP_FILE
 	bool "Use BT Snoop format to log HCI traffic in a file"
+	depends on POSIX_API
+	select BT_BTSNOOP
+
+config BT_BTSNOOP_UART
+	bool "Use BT Snoop format to log HCI traffic over UART"
+	select BT_BTSNOOP
 
 choice BT_DEBUG_TYPE
 	prompt "Bluetooth debug type"
