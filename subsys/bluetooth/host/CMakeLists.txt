@@ -5,7 +5,8 @@ zephyr_library_link_libraries(subsys__bluetooth)
 
 zephyr_library_sources_ifdef(CONFIG_BT_HCI_RAW          hci_raw.c hci_common.c)
 zephyr_library_sources_ifdef(CONFIG_BT_MONITOR          monitor.c)
-zephyr_library_sources_ifdef(CONFIG_BT_BTSNOOP          btsnoop.c)
+zephyr_library_sources_ifdef(CONFIG_BT_BTSNOOP_FILE     btsnoop_file.c)
+zephyr_library_sources_ifdef(CONFIG_BT_BTSNOOP_UART     btsnoop_uart.c)
 zephyr_library_sources_ifdef(CONFIG_BT_TINYCRYPT_ECC    hci_ecc.c)
 zephyr_library_sources_ifdef(CONFIG_BT_A2DP             a2dp.c)
 zephyr_library_sources_ifdef(CONFIG_BT_AVDTP            avdtp.c)
@@ -39,6 +40,7 @@ if(CONFIG_BT_HCI_HOST)
     hci_core.c
     hci_common.c
     id.c
+    btsnoop.c
     )
   zephyr_library_sources_ifdef(
     CONFIG_BT_BROADCASTER
