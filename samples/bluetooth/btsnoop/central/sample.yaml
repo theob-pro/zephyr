@@ -1,0 +1,7 @@
+sample:
+  name: Bluetooth BT Snoop over UART central sample
+tests:
+  sample.bluetooth.central_btsnoop:
+    harness: bluetooth
+    platform_allow: nrf52840dk_nrf52840
+    tags: bluetooth
