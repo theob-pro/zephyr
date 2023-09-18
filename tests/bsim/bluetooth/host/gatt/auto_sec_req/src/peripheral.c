@@ -9,6 +9,8 @@
 
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/uuid.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/bluetooth/bluetooth.h>
 
@@ -17,10 +19,37 @@ LOG_MODULE_REGISTER(test_peripheral, LOG_LEVEL_DBG);
 
 #include "bs_bt_utils.h"
 
+#define UUID_1                                                                                      \
+	BT_UUID_DECLARE_128(0xdb, 0x1f, 0xe2, 0x52, 0xf3, 0xc6, 0x43, 0x66, 0xb3, 0x92, 0x5d,      \
+			    0xc6, 0xe7, 0xc9, 0x59, 0x9d)
+#define UUID_2                                                                                     \
+	BT_UUID_DECLARE_128(0x3f, 0xa4, 0x7f, 0x44, 0x2e, 0x2a, 0x43, 0x05, 0xab, 0x38, 0x07,      \
+			    0x8d, 0x16, 0xbf, 0x99, 0xf1)
+
+static void new_svc_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+	ARG_UNUSED(attr);
+
+	LOG_DBG("%s", __func__);
+
+	bool notif_enabled = (value == BT_GATT_CCC_NOTIFY);
+
+	LOG_DBG("CCC Update: notification %s", notif_enabled ? "enabled" : "disabled");
+}
+
+static struct bt_gatt_attr attrs[] = {
+	BT_GATT_PRIMARY_SERVICE(UUID_1),
+	BT_GATT_CHARACTERISTIC(UUID_2, BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL, NULL),
+	BT_GATT_CCC(new_svc_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+};
+
+static struct bt_gatt_service svc = {
+	.attrs = attrs,
+	.attr_count = ARRAY_SIZE(attrs),
+};
+
 void peripheral(void)
 {
-	LOG_DBG("===== Peripheral =====");
-
 	int err;
 	struct bt_le_ext_adv *adv = NULL;
 
@@ -39,10 +68,16 @@ void peripheral(void)
 	wait_disconnected();
 	clear_g_conn();
 
-	/* TODO: change something in GATT database to trigger the service changed indication */
+	/* add a new service to trigger the service changed indication */
+	err = bt_gatt_service_register(&svc);
+	ASSERT(!err, "bt_gatt_service_register failed (%d)\n", err);
+	LOG_DBG("New service added");
 
 	start_adv(adv);
 	wait_connected();
+
+	/* wait so indication is sent */
+	k_sleep(K_SECONDS(10));
 
 	PASS("PASS\n");
 }

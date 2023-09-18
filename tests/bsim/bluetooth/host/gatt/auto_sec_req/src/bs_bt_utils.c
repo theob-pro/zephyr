@@ -40,6 +40,11 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	UNSET_FLAG(flag_is_connected);
 }
 
+struct bt_conn* get_g_conn(void)
+{
+        return g_conn;
+}
+
 void clear_g_conn(void)
 {
 	struct bt_conn *conn;

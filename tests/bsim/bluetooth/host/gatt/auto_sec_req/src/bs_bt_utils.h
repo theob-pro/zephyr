@@ -8,6 +8,7 @@
 #include "bs_tracing.h"
 
 #include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/uuid.h>
 
 extern enum bst_result_t bst_result;
 
@@ -53,6 +54,7 @@ DECLARE_FLAG(flag_bonded);
 DECLARE_FLAG(flag_not_bonded);
 
 void scan_connect_to_first_result(void);
+struct bt_conn* get_g_conn(void);
 void clear_g_conn(void);
 void disconnect(void);
 void wait_connected(void);
