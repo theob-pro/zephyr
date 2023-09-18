@@ -5724,6 +5724,10 @@ void bt_gatt_connected(struct bt_conn *conn)
 		LOG_WRN("MTU Exchange failed (err %d)", err);
 	}
 #endif /* CONFIG_BT_GATT_AUTO_UPDATE_MTU */
+
+	if (IS_ENABLED(CONFIG_BT_GATT_SERVICE_CHANGED)) {
+		sc_restore(conn);
+	}
 }
 
 void bt_gatt_att_max_mtu_changed(struct bt_conn *conn, uint16_t tx, uint16_t rx)
@@ -5751,15 +5755,6 @@ void bt_gatt_encrypt_change(struct bt_conn *conn)
 #endif	/* CONFIG_BT_GATT_AUTO_RESUBSCRIBE */
 
 	bt_gatt_foreach_attr(0x0001, 0xffff, update_ccc, &data);
-
-#if defined(CONFIG_BT_SETTINGS) && defined(CONFIG_BT_GATT_SERVICE_CHANGED)
-	if (!bt_gatt_change_aware(conn, false)) {
-		/* Send a Service Changed indication if the current peer is
-		 * marked as change-unaware.
-		 */
-		sc_indicate(0x0001, 0xffff);
-	}
-#endif	/* CONFIG_BT_SETTINGS && CONFIG_BT_GATT_SERVICE_CHANGED */
 }
 
 bool bt_gatt_change_aware(struct bt_conn *conn, bool req)
