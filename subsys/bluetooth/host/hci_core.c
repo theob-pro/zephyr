@@ -308,16 +308,41 @@ int bt_hci_cmd_send(uint16_t opcode, struct net_buf *buf)
 		return err;
 	}
 
-	net_buf_put(&bt_dev.cmd_tx_queue, buf);
+	net_buf_put(&bt_dev.cmd_tx_queue, net_buf_ref(buf));
 
 	return 0;
+}
+
+int bt_hci_cmd_send_get_status(struct net_buf *cmd_buf)
+{
+	uint8_t status = cmd(cmd_buf)->status;
+
+	if (status) {
+		switch (status) {
+		case BT_HCI_ERR_CONN_LIMIT_EXCEEDED:
+			return -ECONNREFUSED;
+		case BT_HCI_ERR_INSUFFICIENT_RESOURCES:
+			return -ENOMEM;
+		default:
+			return -EIO;
+		}
+	}
+
+	return 0;
+}
+
+void bt_hci_cmd_send_async(struct net_buf *cmd_buf, struct k_sem *rsp_rcvd)
+{
+	k_sem_init(rsp_rcvd, 0, 1);
+	cmd(cmd_buf)->sync = rsp_rcvd;
+
+	net_buf_put(&bt_dev.cmd_tx_queue, net_buf_ref(cmd_buf));
 }
 
 int bt_hci_cmd_send_sync(uint16_t opcode, struct net_buf *buf,
 			 struct net_buf **rsp)
 {
 	struct k_sem sync_sem;
-	uint8_t status;
 	int err;
 
 	if (!buf) {
@@ -329,38 +354,18 @@ int bt_hci_cmd_send_sync(uint16_t opcode, struct net_buf *buf,
 
 	LOG_DBG("buf %p opcode 0x%04x len %u", buf, opcode, buf->len);
 
-	k_sem_init(&sync_sem, 0, 1);
-	cmd(buf)->sync = &sync_sem;
-
-	net_buf_put(&bt_dev.cmd_tx_queue, net_buf_ref(buf));
+	bt_hci_cmd_send_async(buf, &sync_sem);
 
 	err = k_sem_take(&sync_sem, HCI_CMD_TIMEOUT);
 	BT_ASSERT_MSG(err == 0, "command opcode 0x%04x timeout with err %d", opcode, err);
 
-	status = cmd(buf)->status;
-	if (status) {
-		LOG_WRN("opcode 0x%04x status 0x%02x", opcode, status);
-		net_buf_unref(buf);
-
-		switch (status) {
-		case BT_HCI_ERR_CONN_LIMIT_EXCEEDED:
-			return -ECONNREFUSED;
-		case BT_HCI_ERR_INSUFFICIENT_RESOURCES:
-			return -ENOMEM;
-		default:
-			return -EIO;
-		}
-	}
-
 	LOG_DBG("rsp %p opcode 0x%04x len %u", buf, opcode, buf->len);
 
 	if (rsp) {
-		*rsp = buf;
-	} else {
-		net_buf_unref(buf);
+		*rsp = net_buf_ref(buf);
 	}
 
-	return 0;
+	return bt_hci_cmd_send_get_status(buf);
 }
 
 int bt_hci_le_rand(void *buffer, size_t len)
@@ -2288,6 +2293,8 @@ static void hci_reset_complete(struct net_buf *buf)
 
 static void hci_cmd_done(uint16_t opcode, uint8_t status, struct net_buf *buf)
 {
+	struct k_sem *sync;
+
 	LOG_DBG("opcode 0x%04x status 0x%02x buf %p", opcode, status, buf);
 
 	if (net_buf_pool_get(buf->pool_id) != &hci_cmd_pool) {
@@ -2313,10 +2320,13 @@ static void hci_cmd_done(uint16_t opcode, uint8_t status, struct net_buf *buf)
 		atomic_set_bit_to(update->target, update->bit, update->val);
 	}
 
+	sync = cmd(buf)->sync;
+	cmd(buf)->status = status;
+	net_buf_unref(buf);
+
 	/* If the command was synchronous wake up bt_hci_cmd_send_sync() */
-	if (cmd(buf)->sync) {
-		cmd(buf)->status = status;
-		k_sem_give(cmd(buf)->sync);
+	if (sync) {
+		k_sem_give(sync);
 	}
 }
 
