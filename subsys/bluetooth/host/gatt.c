@@ -5051,6 +5051,9 @@ static int gatt_cancel_all_writes(struct bt_conn *conn,
 			     BT_ATT_CHAN_OPT(params));
 }
 
+static int gatt_prepare_write(struct bt_conn *conn,
+			      struct bt_gatt_write_params *params);
+
 static void gatt_prepare_write_rsp(struct bt_conn *conn, int err,
 				   const void *pdu, uint16_t length,
 				   void *user_data)
@@ -5110,7 +5113,7 @@ static void gatt_prepare_write_rsp(struct bt_conn *conn, int err,
 	}
 
 	/* Write next chunk */
-	if (!bt_gatt_write(conn, params)) {
+	if (!gatt_prepare_write(conn, params)) {
 		/* Success */
 		return;
 	}
@@ -5176,6 +5179,74 @@ static int gatt_write_encode(struct net_buf *buf, size_t len, void *user_data)
 	return 0;
 }
 
+int bt_gatt_write_long(struct bt_conn *conn, enum bt_att_chan_opt chan_opt, uint16_t handle,
+		       uint16_t offset, const void *data, uint16_t length, bt_gatt_write_func_t cb,
+		       struct write_long_mem *mem)
+{
+#if !defined(CONFIG_BT_EATT)
+	ARG_UNUSED(chan_opt);
+#endif
+	__ASSERT(conn, "invalid parameters\n");
+	__ASSERT(mem, "invalid parameters\n");
+	__ASSERT(cb, "invalid parameters\n");
+
+	if (conn->state != BT_CONN_CONNECTED) {
+		return -ENOTCONN;
+	}
+
+	struct bt_gatt_write_params *params = (struct bt_gatt_write_params *)mem->_write_long_data;
+
+	params->func = cb;
+	params->data = data;
+	params->length = length;
+	params->handle = handle;
+	params->offset = offset;
+#if defined(CONFIG_BT_EATT)
+	params->chan_opt = chan_opt;
+#endif
+
+	return gatt_prepare_write(conn, params);
+}
+
+int bt_gatt_simple_write(struct bt_conn *conn, enum bt_att_chan_opt chan_opt, uint16_t handle,
+			 const void *data, uint16_t length, bt_gatt_write_func_t cb,
+			 struct simple_write_mem *mem)
+{
+	size_t len;
+	struct bt_gatt_write_params *params;
+
+#if !defined(CONFIG_BT_EATT)
+	ARG_UNUSED(chan_opt);
+#endif
+	__ASSERT(conn, "invalid parameters\n");
+	__ASSERT(mem, "invalid parameters\n");
+	__ASSERT(cb, "invalid parameters\n");
+
+	if (conn->state != BT_CONN_CONNECTED) {
+		return -ENOTCONN;
+	}
+
+	len = sizeof(struct bt_att_write_req) + length;
+
+	if (len > (bt_att_get_mtu(conn) - 1)) {
+		LOG_DBG("data are too large");
+		return -EDOM;
+	}
+
+	params = (struct bt_gatt_write_params *)mem->_simple_write_data;
+
+	params->func = cb;
+	params->data = data;
+	params->length = length;
+	params->handle = handle;
+#if defined(CONFIG_BT_EATT)
+	params->chan_opt = chan_opt;
+#endif
+
+	return gatt_req_send(conn, gatt_write_rsp, params, gatt_write_encode, BT_ATT_OP_WRITE_REQ,
+			     len, BT_ATT_CHAN_OPT(params));
+}
+
 int bt_gatt_write(struct bt_conn *conn, struct bt_gatt_write_params *params)
 {
 	size_t len;
@@ -5190,15 +5261,21 @@ int bt_gatt_write(struct bt_conn *conn, struct bt_gatt_write_params *params)
 
 	len = sizeof(struct bt_att_write_req) + params->length;
 
-	/* Use Prepare Write if offset is set or Long Write is required */
+	/* Use Write Long if offset is set or data are too large */
 	if (params->offset || len > (bt_att_get_mtu(conn) - 1)) {
-		return gatt_prepare_write(conn, params);
+		struct write_long_mem *write_long_mem = (struct write_long_mem *)params;
+
+		return bt_gatt_write_long(conn, BT_ATT_CHAN_OPT(params), params->handle,
+					  params->offset, params->data, params->length,
+					  params->func, write_long_mem);
 	}
 
 	LOG_DBG("handle 0x%04x length %u", params->handle, params->length);
 
-	return gatt_req_send(conn, gatt_write_rsp, params, gatt_write_encode,
-			     BT_ATT_OP_WRITE_REQ, len, BT_ATT_CHAN_OPT(params));
+	struct simple_write_mem *simple_write_mem = (struct simple_write_mem *)params;
+
+	return bt_gatt_simple_write(conn, BT_ATT_CHAN_OPT(params), params->handle, params->data,
+				    params->length, params->func, simple_write_mem);
 }
 
 static void gatt_write_ccc_rsp(struct bt_conn *conn, int err,

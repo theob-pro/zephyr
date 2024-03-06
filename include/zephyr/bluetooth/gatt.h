@@ -1703,14 +1703,18 @@ struct bt_gatt_write_params {
 
 /** @brief Write Attribute Value by handle
  *
- *  The Response comes in callback @p params->func. The callback is run from
- *  the context specified by 'config BT_RECV_CONTEXT'.
+ *  The Response comes in callback @p params->func. The callback is run from the
+ *  context specified by 'config BT_RECV_CONTEXT'.
  *  @p params must remain valid until start of callback.
  *
  *  This function will block while the ATT request queue is full, except when
  *  called from Bluetooth event context. When called from Bluetooth context,
  *  this function will instead instead return `-ENOMEM` if it would block to
  *  avoid a deadlock.
+ *
+ *  @note If the length of the data is greater than the ATT MTU then the request
+ *  will be executed using a GATT Long Write. (see Core Specification v5.4.3
+ *  vol. 3 part G 4.9.4)
  *
  *  @param conn Connection object.
  *  @param params Write parameters.
@@ -1793,6 +1797,84 @@ static inline int bt_gatt_write_without_response(struct bt_conn *conn,
 	return bt_gatt_write_without_response_cb(conn, handle, data, length,
 						 sign, NULL, NULL);
 }
+
+#define GATT_SIMPLE_WRITE_MEM sizeof(struct bt_gatt_write_params)
+
+struct simple_write_mem {
+	uint8_t _simple_write_data[GATT_SIMPLE_WRITE_MEM];
+};
+
+/** @brief Write Attribute Value by handle
+ *
+ *  The Response comes in callback @p cb. The callback is run from the context
+ *  specified by 'config BT_RECV_CONTEXT'.
+ *  @p mem must remain valid until start of callback.
+ *
+ *  This function will block while the ATT request queue is full, except when
+ *  called from Bluetooth event context. When called from Bluetooth context,
+ *  this function will instead instead return `-ENOMEM` if it would block to
+ *  avoid a deadlock.
+ *
+ *  @note If the length of the data is greater than the ATT MTU then the
+ *  function will return something `-EDOM`.
+ *
+ *  @param conn Connection object
+ *  @param chan_opt ATT channel option
+ *  @param handle Attribute handle
+ *  @param data Data to be written
+ *  @param length Length of the data
+ *  @param cb Response callback
+ *  @param mem User allocated memory used internally
+ *
+ *  @retval 0 Successfully queued request
+ *
+ *  @retval -EDOM if data is too large
+ *
+ *  @retval -ENOMEM ATT request queue is full and blocking would cause deadlock.
+ *  Allow a pending request to resolve before retrying, or call this function
+ *  outside Bluetooth event context to get blocking behavior. Queue size is
+ *  controlled by @kconfig{CONFIG_BT_ATT_TX_COUNT}.
+ */
+int bt_gatt_simple_write(struct bt_conn *conn, enum bt_att_chan_opt chan_opt, uint16_t handle,
+			 const void *data, uint16_t length, bt_gatt_write_func_t cb,
+			 struct simple_write_mem *mem);
+
+#define GATT_WRITE_LONG_MEM sizeof(struct bt_gatt_write_params)
+
+struct write_long_mem {
+	uint8_t _write_long_data[GATT_WRITE_LONG_MEM];
+};
+
+/** @brief Write Long Attribute Value by handle
+ *
+ *  The Response comes in callback @p cb. The callback is run from the context
+ *  specified by 'config BT_RECV_CONTEXT'.
+ *  @p mem must remain valid until start of callback.
+ *
+ *  This function will block while the ATT request queue is full, except when
+ *  called from Bluetooth event context. When called from Bluetooth context,
+ *  this function will instead instead return `-ENOMEM` if it would block to
+ *  avoid a deadlock.
+ *
+ *  @param conn Connection object
+ *  @param chan_opt ATT channel option
+ *  @param handle Attribute handle
+ *  @param offset Attribute data offset
+ *  @param data Data to be written
+ *  @param length Length of the data
+ *  @param cb Response callback
+ *  @param mem User allocated memory used internally
+ *
+ *  @retval 0 Successfully queued request
+ *
+ *  @retval -ENOMEM ATT request queue is full and blocking would cause deadlock.
+ *  Allow a pending request to resolve before retrying, or call this function
+ *  outside Bluetooth event context to get blocking behavior. Queue size is
+ *  controlled by @kconfig{CONFIG_BT_ATT_TX_COUNT}.
+ */
+int bt_gatt_write_long(struct bt_conn *conn, enum bt_att_chan_opt chan_opt, uint16_t handle,
+		       uint16_t offset, const void *data, uint16_t length, bt_gatt_write_func_t cb,
+		       struct write_long_mem *mem);
 
 struct bt_gatt_subscribe_params;
 
