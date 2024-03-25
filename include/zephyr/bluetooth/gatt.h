@@ -1703,14 +1703,18 @@ struct bt_gatt_write_params {
 
 /** @brief Write Attribute Value by handle
  *
- *  The Response comes in callback @p params->func. The callback is run from
- *  the context specified by 'config BT_RECV_CONTEXT'.
+ *  The Response comes in callback @p params->func. The callback is run from the
+ *  context specified by 'config BT_RECV_CONTEXT'.
  *  @p params must remain valid until start of callback.
  *
  *  This function will block while the ATT request queue is full, except when
  *  called from Bluetooth event context. When called from Bluetooth context,
  *  this function will instead instead return `-ENOMEM` if it would block to
  *  avoid a deadlock.
+ *
+ *  @note If the length of the data is greater than the ATT MTU then the request
+ *  will be executed using a GATT Long Write. (see Core Specification v5.4.3
+ *  vol. 3 part G 4.9.4)
  *
  *  @param conn Connection object.
  *  @param params Write parameters.
