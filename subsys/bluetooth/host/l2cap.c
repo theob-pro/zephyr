@@ -3072,22 +3072,21 @@ static int bt_l2cap_dyn_chan_send(struct bt_l2cap_le_chan *le_chan, struct net_b
 		return -EINVAL;
 	}
 
-	/* Prepend SDU "header".
+	/* Prepend SDU length.
 	 *
-	 * L2CAP LE CoC SDUs are segmented into PDUs and sent over so-called
-	 * K-frames that each have their own L2CAP header (ie channel, PDU
-	 * length).
+	 * L2CAP LE CoC SDUs are segmented and put into K-frames PDUs have their
+	 * own L2CAP header (i.e. PDU length, channel id).
 	 *
-	 * The SDU header is right before the data that will be segmented and is
-	 * only present in the first segment/PDU. Here's an example:
+	 * The SDU length is right before the data that will be segmented and is
+	 * only present in the first PDU. Here's an example:
 	 *
 	 * Sent data payload of 50 bytes over channel 0x4040 with MPS of 30 bytes:
-	 * First PDU / segment / K-frame:
+	 * First PDU (K-frame):
 	 * | L2CAP K-frame header        | K-frame payload                 |
-	 * | PDU length  | Channel ID    | SDU header   | SDU payload      |
+	 * | PDU length  | Channel ID    | SDU length   | SDU payload      |
 	 * | 30          | 0x4040        | 50           | 28 bytes of data |
 	 *
-	 * Second and last PDU / segment / K-frame:
+	 * Second and last PDU (K-frame):
 	 * | L2CAP K-frame header        | K-frame payload     |
 	 * | PDU length  | Channel ID    | rest of SDU payload |
 	 * | 22          | 0x4040        | 22 bytes of data    |
