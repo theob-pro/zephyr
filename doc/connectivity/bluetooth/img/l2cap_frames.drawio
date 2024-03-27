@@ -1,0 +1,91 @@
+<mxfile host="app.diagrams.net" modified="2024-04-03T11:40:17.883Z" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0" etag="wbX9N4ZYGEsQhA4-m3MU" version="24.2.1" type="device">
+  <diagram name="Page-1" id="QQokUqR677SrVn7bYZOC">
+    <mxGraphModel dx="1185" dy="757" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="reYpw78VQPuatm9fdqTn-1" value="&lt;div&gt;L2CAP HDR&lt;/div&gt;&lt;div&gt;(PDU length + channel ID)&lt;br&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontFamily=Courier New;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="40" y="200" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-2" value="Information Payload" style="whiteSpace=wrap;html=1;fontFamily=Courier New;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="160" y="200" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-3" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="230" y="-20" width="20" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-4" value="B-frame PDU" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="40" y="140" width="400" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-5" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="90" y="240" width="20" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-6" value="4 octets" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="40" y="310" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-7" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="290" y="160" width="20" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-8" value="≤ MPS" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="160" y="310" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-9" value="&lt;div&gt;L2CAP HDR&lt;/div&gt;&lt;div&gt;(PDU length + channel ID)&lt;br&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontFamily=Courier New;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="40" y="460" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-10" value="Information Payload (L2CAP SDU)" style="whiteSpace=wrap;html=1;fontFamily=Courier New;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="160" y="460" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-11" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="230" y="240" width="20" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-12" value="K-frame PDU (next ones)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="40" y="400" width="400" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-13" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="90" y="500" width="20" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-14" value="4 octets" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="40" y="570" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-15" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="290" y="420" width="20" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-16" value="≤ MPS" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="160" y="570" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-17" value="&lt;div&gt;L2CAP HDR&lt;/div&gt;&lt;div&gt;(PDU length + channel ID)&lt;br&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontFamily=Courier New;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="40" y="720" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-18" value="Information Payload&lt;br&gt;(L2CAP SDU)" style="whiteSpace=wrap;html=1;fontFamily=Courier New;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="240" y="720" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-19" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;labelPosition=left;verticalLabelPosition=middle;align=right;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="230" y="500" width="20" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-20" value="K-frame PDU (first one)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="40" y="660" width="400" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-21" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="90" y="760" width="20" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-22" value="4 octets" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="40" y="830" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-23" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="330" y="720" width="20" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-24" value="≤ MPS" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="240" y="830" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-25" value="L2CAP SDU length" style="whiteSpace=wrap;html=1;fontFamily=Courier New;fillColor=none;" parent="1" vertex="1">
+          <mxGeometry x="160" y="720" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-26" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" parent="1" vertex="1">
+          <mxGeometry x="190" y="780" width="20" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="reYpw78VQPuatm9fdqTn-27" value="2 octets" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontFamily=Courier New;" parent="1" vertex="1">
+          <mxGeometry x="160" y="830" width="80" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
