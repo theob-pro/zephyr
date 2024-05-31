@@ -1,0 +1,10 @@
+source "share/sysbuild/Kconfig"
+
+config HCI_IPC_NETCORE
+        bool "Build hci_ipc for the network core"
+        default y if SOC_NRF5340_CPUAPP
+
+config HCI_IPC_CORE_BOARD
+	string "Board name for the hci_ipc application"
+	default "nrf5340dk/nrf5340/cpunet" if SOC_NRF5340_CPUAPP
+    depends on HCI_IPC_NETCORE
