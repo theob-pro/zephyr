@@ -192,8 +192,21 @@ static inline int ssd1306_set_charge_pump(const struct device *dev)
 {
 	const struct ssd1306_config *config = dev->config;
 	uint8_t cmd_buf[] = {
-		SSD1306_SET_CHARGE_PUMP_ON,
-		SSD1306_SET_CHARGE_PUMP_ON_ENABLED,
+		(config->sh1106_compatible ? SH1106_SET_DCDC_MODE : SSD1306_SET_CHARGE_PUMP_ON),
+		(config->sh1106_compatible ? SH1106_SET_DCDC_ENABLED
+					   : SSD1306_SET_CHARGE_PUMP_ON_ENABLED),
+		SSD1306_PANEL_PUMP_VOLTAGE,
+	};
+
+	return ssd1306_write_bus(dev, cmd_buf, sizeof(cmd_buf), true);
+}
+
+static inline int ssd1306_set_iref_mode(const struct device *dev)
+{
+	const struct ssd1306_config *config = dev->config;
+	uint8_t cmd_buf[] = {
+		SSD1306_SET_IREF_MODE,
+		SSD1306_SET_IREF_MODE_INTERNAL,
 	};
 
 	return ssd1306_write_bus(dev, cmd_buf, sizeof(cmd_buf), true);
@@ -247,10 +260,10 @@ static int ssd1306_write_sh1106(const struct device *dev, const uint16_t x, cons
 	const struct ssd1306_config *config = dev->config;
 	uint8_t x_offset = x + config->segment_offset;
 	uint8_t cmd_buf[] = {
-		SSD1306_SET_HIGHER_COL_ADDRESS |
-			((x_offset >> 4) & SSD1306_SET_LOWER_COL_ADDRESS_MASK),
 		SSD1306_SET_LOWER_COL_ADDRESS |
 			(x_offset & SSD1306_SET_LOWER_COL_ADDRESS_MASK),
+		SSD1306_SET_HIGHER_COL_ADDRESS |
+			((x_offset >> 4) & SSD1306_SET_LOWER_COL_ADDRESS_MASK),
 		SSD1306_SET_PAGE_START_ADDRESS | (y / 8)
 	};
 	uint8_t *buf_ptr = (uint8_t *)buf;
@@ -308,7 +321,8 @@ static int ssd1306_write(const struct device *dev, const uint16_t x, const uint1
 	LOG_DBG("x %u, y %u, pitch %u, width %u, height %u, buf_len %u", x, y, desc->pitch,
 		desc->width, desc->height, buf_len);
 
-	if (config->sh1106_compatible) {
+	/* TODO: DTS property */
+	if (config->sh1106_compatible || true) {
 		return ssd1306_write_sh1106(dev, x, y, desc, buf, buf_len);
 	}
 
@@ -319,7 +333,7 @@ static int ssd1306_set_contrast(const struct device *dev, const uint8_t contrast
 {
 	uint8_t cmd_buf[] = {
 		SSD1306_SET_CONTRAST_CTRL,
-		0xaf,
+		contrast,
 	};
 
 	return ssd1306_write_bus(dev, cmd_buf, sizeof(cmd_buf), true);
@@ -369,13 +383,6 @@ static int ssd1306_set_pixel_format(const struct device *dev,
 	return 0;
 }
 
-static int send_cmd(const struct device *dev, uint8_t cmd, uint8_t arg, bool argp)
-{
-	uint8_t cmd_buf[] = {cmd, arg};
-
-	return ssd1306_write_bus(dev, cmd_buf, argp ? 2:1, true);
-}
-
 static int ssd1306_init_device(const struct device *dev)
 {
 	const struct ssd1306_config *config = dev->config;
@@ -410,19 +417,16 @@ static int ssd1306_init_device(const struct device *dev)
 		return -EIO;
 	}
 
-	// if (ssd1306_set_panel_orientation(dev)) {
-	// 	return -EIO;
-	// }
+	if (ssd1306_set_panel_orientation(dev)) {
+		return -EIO;
+	}
 
 	if (ssd1306_set_charge_pump(dev)) {
 		return -EIO;
 	}
 
-	if (send_cmd(dev, 0xad, 0x30, true)) {
-		return -EIO;
-	}
-
-	if (send_cmd(dev, 0x2e, 0, false)) {
+	/* TODO: DTS property */
+	if (ssd1306_set_iref_mode(dev)) {
 		return -EIO;
 	}
 
