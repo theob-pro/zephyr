@@ -53,8 +53,8 @@ int main(void)
 			break;
 		}
 		cfb_framebuffer_set_font(dev, idx);
-		printf("font width %d, font height %d\n",
-		       font_width, font_height);
+		printf("font width %d, font height %d\n", font_width, font_height);
+		break;
 	}
 
 	printf("x_res %d, y_res %d, ppt %d, rows %d, cols %d\n",
@@ -69,11 +69,11 @@ int main(void)
 	cfb_set_kerning(dev, 3);
 
 	while (1) {
-		for (int i = 0; i < MIN(x_res, y_res); i++) {
+		for (int i = 0; i < y_res; i++) {
 			cfb_framebuffer_clear(dev, false);
 			if (cfb_print(dev,
-				      "0123456789mMgj!\"§$%&/()=",
-				      i, i)) {
+				      "hola",
+				      0, i)) {
 				printf("Failed to print a string\n");
 				continue;
 			}
