@@ -13,7 +13,8 @@
 	pinctrl-names = "default";
 
 	ssd1306_72x40: ssd1306@3c {
-		compatible = "sinowealth,sh1106";
+		/* compatible = "sinowealth,sh1106"; */
+		compatible = "solomon,ssd1306fb";
 		reg = <0x3c>;
 		width = <72>;
 		height = <40>;
@@ -25,6 +26,8 @@
 		ready-time-ms = <10>;
 		segment-remap;
 		com-invdir;
+		use-internal-iref;
+		use-alternative-write;
 	};
 };
 
