@@ -906,19 +906,19 @@ struct bt_conn *get_conn_ready(void)
 		/* We will get scheduled again when the (view) buffers are freed. If you
 		 * hit this a lot, try increasing `CONFIG_BT_CONN_FRAG_COUNT`
 		 */
-		LOG_DBG("no view bufs");
+		LOG_INF("no view bufs");
 		return NULL;
 	}
 
 	if (cannot_send_to_controller(conn)) {
 		/* We will get scheduled again when the buffers are freed. */
-		LOG_DBG("no LL bufs for %p", conn);
+		LOG_INF("no LL bufs for %p", conn);
 		return NULL;
 	}
 
 	if (dont_have_tx_context(conn)) {
 		/* We will get scheduled again when TX contexts are available. */
-		LOG_DBG("no TX contexts");
+		LOG_INF("no TX contexts");
 		return NULL;
 	}
 
@@ -1006,6 +1006,7 @@ void bt_conn_suspend_tx(bool suspend)
 void bt_conn_tx_processor(void)
 {
 	LOG_DBG("start");
+
 	struct bt_conn *conn;
 	struct net_buf *buf;
 	bt_conn_tx_cb_t cb = NULL;
@@ -1024,7 +1025,7 @@ void bt_conn_tx_processor(void)
 	conn = get_conn_ready();
 
 	if (!conn) {
-		LOG_DBG("no connection wants to do stuff");
+		LOG_INF("no connection wants to do stuff");
 		return;
 	}
 

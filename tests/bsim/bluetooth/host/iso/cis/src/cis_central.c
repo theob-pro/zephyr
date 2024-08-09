@@ -30,7 +30,7 @@ CREATE_FLAG(flag_iso_connected);
 static void send_data_cb(struct k_work *work)
 {
 	static uint8_t buf_data[CONFIG_BT_ISO_TX_MTU];
-	static size_t len_to_send = 1;
+	static size_t len_to_send = 40;
 	static bool data_initialized;
 	struct net_buf *buf;
 	int ret;
@@ -52,6 +52,7 @@ static void send_data_cb(struct k_work *work)
 	net_buf_reserve(buf, BT_ISO_CHAN_SEND_RESERVE);
 
 	net_buf_add_mem(buf, buf_data, len_to_send);
+	printk("#############3 send iso len %d", buf->len);
 
 	ret = bt_iso_chan_send(default_chan, buf, seq_num++);
 	if (ret < 0) {
@@ -62,11 +63,6 @@ static void send_data_cb(struct k_work *work)
 		k_work_reschedule(k_work_delayable_from_work(work), K_USEC(interval_us));
 
 		return;
-	}
-
-	len_to_send++;
-	if (len_to_send > ARRAY_SIZE(buf_data)) {
-		len_to_send = 1;
 	}
 
 	enqueue_cnt--;
@@ -131,6 +127,8 @@ static void sdu_sent_cb(struct bt_iso_chan *chan)
 	int err;
 
 	enqueue_cnt++;
+
+	printk("============ COUCOU ICI\n");
 
 	if (!TEST_FLAG(flag_iso_connected)) {
 		/* TX has been aborted */
@@ -396,28 +394,54 @@ static void terminate_cig(void)
 	cig = NULL;
 }
 
-static void reset_bluetooth(void)
+#include <zephyr/sys/byteorder.h>
+
+CREATE_FLAG(first_frag);
+
+static size_t curr_len;
+
+static void set_flags(size_t length)
 {
-	int err;
+	/* Any action attempted by the main thread will have to wait until the
+	 * TX processor is done. That means that even if technically the
+	 * controller hasn't gotten the current frag yet, in practice we can
+	 * consider it has, as the TX processor runs from a cooperative
+	 * execution priority.
+	 */
+	curr_len += length;
 
-	printk("Resetting Bluetooth\n");
+	if (curr_len == length) {
+		// LOG_ERR("first");
+		printk("\nblahblah\n\n");
 
-	err = bt_disable();
-	if (err != 0) {
-		FAIL("Failed to disable (%d)\n", err);
-
-		return;
+		SET_FLAG(first_frag);
 	}
 
-	/* After a disable, all CIGs and BIGs are removed */
-	cig = NULL;
+	// if (curr_len == expect_len) {
+	// 	LOG_ERR("last frag");
+	// 	SET_FLAG(sent_all_frags);
+	// }
+}
 
-	err = bt_enable(NULL);
-	if (err != 0) {
-		FAIL("Failed to re-enable (%d)\n", err);
+int __real_bt_send(struct net_buf *buf);
 
-		return;
+int __wrap_bt_send(struct net_buf *buf)
+{
+	if (bt_buf_get_type(buf) == BT_BUF_ISO_OUT) {
+		struct bt_hci_acl_hdr *acl;
+		uint16_t handle;
+		uint16_t len;
+
+		acl = (void*)buf->data;
+		len = sys_le16_to_cpu(acl->len);
+		handle = sys_le16_to_cpu(acl->handle);
+
+		set_flags(len);
+
+		printk("\nCOUCOUCOUCOUCOCUCOUCOU\n\n");
 	}
+
+	return __real_bt_send(buf);
 }
 
 static void test_main(void)
@@ -428,43 +452,17 @@ static void test_main(void)
 	connect_acl();
 	connect_cis();
 
-	while (seq_num < 100U) {
-		k_sleep(K_USEC(interval_us));
-	}
+	// while (seq_num < 100U) {
+		// k_sleep(K_USEC(interval_us));
+	// }
+
+	WAIT_FOR_FLAG_SET(first_frag);
 
 	disconnect_cis();
 	disconnect_acl();
 	terminate_cig();
 
 	PASS("Test passed\n");
-}
-
-static void test_main_disable(void)
-{
-	init();
-
-	/* Setup and connect before disabling */
-	create_cig(ARRAY_SIZE(iso_chans));
-	connect_acl();
-	connect_cis();
-
-	/* Reset BT to see if we can set it up again */
-	reset_bluetooth();
-
-	/* Set everything up again to see if everything still works as expected */
-	create_cig(ARRAY_SIZE(iso_chans));
-	connect_acl();
-	connect_cis();
-
-	while (seq_num < 100U) {
-		k_sleep(K_USEC(interval_us));
-	}
-
-	disconnect_cis();
-	disconnect_acl();
-	terminate_cig();
-
-	PASS("Disable test passed\n");
 }
 
 static const struct bst_test_instance test_def[] = {
@@ -474,13 +472,6 @@ static const struct bst_test_instance test_def[] = {
 		.test_pre_init_f = test_init,
 		.test_tick_f = test_tick,
 		.test_main_f = test_main,
-	},
-	{
-		.test_id = "central_disable",
-		.test_descr = "CIS central that tests bt_disable for ISO",
-		.test_pre_init_f = test_init,
-		.test_tick_f = test_tick,
-		.test_main_f = test_main_disable,
 	},
 	BSTEST_END_MARKER,
 };

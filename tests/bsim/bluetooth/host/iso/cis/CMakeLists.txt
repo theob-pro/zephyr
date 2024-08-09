@@ -21,3 +21,5 @@ add_subdirectory(${ZEPHYR_BASE}/tests/bluetooth/common/testlib testlib)
 target_link_libraries(app PRIVATE
   testlib
 )
+
+target_link_options(app PUBLIC -Wl,--wrap=bt_send)

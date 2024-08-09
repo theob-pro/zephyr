@@ -757,6 +757,9 @@ static struct net_buf *iso_data_pull(struct bt_conn *conn,
 				     size_t *length)
 {
 #if defined(CONFIG_BT_ISO_TX)
+	LOG_ERR("===== plop 1 =====");
+	LOG_ERR("conn %p amount %d state %d", conn, amount, conn->iso.chan->state);
+
 	BT_ISO_DATA_DBG("conn %p amount %d", conn, amount);
 
 	/* Leave the PDU buffer in the queue until we have sent all its
@@ -765,6 +768,7 @@ static struct net_buf *iso_data_pull(struct bt_conn *conn,
 	struct net_buf *frag = k_fifo_peek_head(&conn->iso.txq);
 
 	if (!frag) {
+		LOG_WRN("no frag");
 		BT_ISO_DATA_DBG("signaled ready but no frag available");
 		/* Service other connections */
 		bt_tx_irq_raise();
@@ -774,6 +778,8 @@ static struct net_buf *iso_data_pull(struct bt_conn *conn,
 
 	if (conn->iso.chan->state != BT_ISO_STATE_CONNECTED) {
 		__maybe_unused struct net_buf *b = k_fifo_get(&conn->iso.txq, K_NO_WAIT);
+
+		LOG_ERR("===== plop 2 =====");
 
 		LOG_DBG("channel has been disconnected");
 		__ASSERT_NO_MSG(b == frag);
@@ -788,9 +794,13 @@ static struct net_buf *iso_data_pull(struct bt_conn *conn,
 		/* This should not happen. conn.c should wait until the view is
 		 * destroyed before requesting more data.
 		 */
-		LOG_DBG("already have view");
+		LOG_INF("already have view");
 		return NULL;
+
 	}
+
+
+	LOG_INF("remaining %d", frag->len);
 
 	bool last_frag = amount >= frag->len;
 
@@ -805,6 +815,8 @@ static struct net_buf *iso_data_pull(struct bt_conn *conn,
 
 	return frag;
 #else
+	LOG_ERR("===== pas plop =====");
+
 	return NULL;
 #endif
 }
@@ -839,6 +851,13 @@ int conn_iso_send(struct bt_conn *conn, struct net_buf *buf, enum bt_iso_timesta
 			buf->pool_id);
 		return -EINVAL;
 	}
+
+	/* push the TS flag on the buffer itself.
+	 * It will be popped and read back by conn before adding the ISO HCI header.
+	 */
+	net_buf_push_u8(buf, has_ts);
+
+	LOG_INF("enqueue ISO len %d", buf->len);
 
 	net_buf_put(&conn->iso.txq, buf);
 	BT_ISO_DATA_DBG("%p put on list", buf);
@@ -1074,6 +1093,8 @@ int bt_iso_chan_get_tx_sync(const struct bt_iso_chan *chan, struct bt_iso_tx_inf
 int bt_iso_chan_disconnect(struct bt_iso_chan *chan)
 {
 	int err;
+
+	LOG_ERR("ALO");
 
 	CHECKIF(!chan) {
 		LOG_DBG("Invalid parameter: chan %p", chan);
