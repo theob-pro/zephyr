@@ -785,7 +785,7 @@ static struct net_buf *iso_data_pull(struct bt_conn *conn,
 		__ASSERT_NO_MSG(b == frag);
 
 		/* FIXME: do we leak buffers here too? */
-		// net_buf_unref(b);
+		// net_buf_unref(b); //
 		// __ASSERT_NO_MSG(b->ref == 0);
 
 		/* Service other connections */

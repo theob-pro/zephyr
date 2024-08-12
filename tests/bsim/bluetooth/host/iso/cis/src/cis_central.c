@@ -392,46 +392,18 @@ CREATE_FLAG(first_frag);
 static size_t curr_len;
 extern void bt_conn_suspend_tx(bool suspend);
 
-static void set_flags(size_t length)
-{
-	/* Any action attempted by the main thread will have to wait until the
-	 * TX processor is done. That means that even if technically the
-	 * controller hasn't gotten the current frag yet, in practice we can
-	 * consider it has, as the TX processor runs from a cooperative
-	 * execution priority.
-	 */
-	curr_len += length;
-
-	if (curr_len == length) {
-		// LOG_ERR("first");
-		printk("\nblahblah\n\n");
-
-		SET_FLAG(first_frag);
-		bt_conn_suspend_tx(true);
-	}
-
-	// if (curr_len == expect_len) {
-	// 	LOG_ERR("last frag");
-	// 	SET_FLAG(sent_all_frags);
-	// }
-}
-
 int __real_bt_send(struct net_buf *buf);
 int __wrap_bt_send(struct net_buf *buf)
 {
 	if (bt_buf_get_type(buf) == BT_BUF_ISO_OUT) {
-		struct bt_hci_acl_hdr *acl;
-		uint16_t handle;
-		uint16_t len;
 
-		acl = (void*)buf->data;
-		len = sys_le16_to_cpu(acl->len);
-		handle = sys_le16_to_cpu(acl->handle);
+	uint16_t handle = sys_le16_to_cpu(hci_hdr->handle);
+	uint8_t flags = bt_iso_flags(handle);
+	uint8_t pb_flag = bt_iso_flags_pb(flags);
 
-		set_flags(len);
-
-		printk("\nCOUCOUCOUCOUCOCUCOUCOU\n\n");
-	}
+	if (pb_flag == BT_ISO_START) {
+		SET_FLAG(first_frag);
+		bt_conn_suspend_tx(true);}}
 
 	return __real_bt_send(buf);
 }
@@ -439,7 +411,6 @@ int __wrap_bt_send(struct net_buf *buf)
 static void test_loop(void)
 {
 	UNSET_FLAG(first_frag);
-	curr_len=0;
 
 	create_cig(1);
 	reconfigure_cig();
