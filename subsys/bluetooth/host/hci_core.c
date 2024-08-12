@@ -3176,8 +3176,6 @@ static void read_buffer_size_v2_complete(struct net_buf *buf)
 		return;
 	}
 
-	bt_dev.le.iso_mtu = iso_mtu;
-
 	LOG_DBG("ISO buffers: pkts %u mtu %u", rp->iso_max_num, bt_dev.le.iso_mtu);
 
 	k_sem_init(&bt_dev.le.iso_pkts, rp->iso_max_num, rp->iso_max_num);
@@ -4309,6 +4307,11 @@ k_tid_t bt_testing_tx_tid_get(void)
 {
 	/* We now TX everything from the syswq */
 	return &k_sys_work_q.thread;
+}
+
+void bt_testing_set_iso_mtu(uint16_t mtu)
+{
+	bt_dev.le.iso_mtu = mtu;
 }
 #endif
 

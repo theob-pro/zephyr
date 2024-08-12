@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/iso.h>
@@ -462,9 +463,13 @@ static void test_loop(void)
 	k_msleep(1000);
 }
 
+extern void bt_testing_set_iso_mtu(uint16_t);
+
 static void test_main(void)
 {
 	init();
+
+	bt_testing_set_iso_mtu(10);
 
 	for (int l=0; l < (ENQUEUE_COUNT * 2); l++) {
 		test_loop();
