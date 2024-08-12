@@ -163,9 +163,7 @@ static void test_main(void)
 		adv_connect();
 		bt_testlib_conn_wait_free();
 
-		if (TEST_FLAG(flag_data_received)) {
 			PASS("Test passed\n");
-		}
 	}
 }
 

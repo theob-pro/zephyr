@@ -5,6 +5,7 @@
  */
 
 #include "common.h"
+#include <stdbool.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/iso.h>
@@ -27,7 +28,7 @@ BUILD_ASSERT(CONFIG_BT_ISO_MAX_CHAN > 1, "CONFIG_BT_ISO_MAX_CHAN shall be at lea
 
 CREATE_FLAG(flag_iso_connected);
 
-static void send_data_cb(struct k_work *work)
+static void send_data_cb()
 {
 	static uint8_t buf_data[CONFIG_BT_ISO_TX_MTU];
 	static size_t len_to_send = 40;
@@ -36,6 +37,7 @@ static void send_data_cb(struct k_work *work)
 	int ret;
 
 	if (!TEST_FLAG(flag_iso_connected)) {
+		k_oops();
 		/* TX has been aborted */
 		return;
 	}
@@ -47,33 +49,21 @@ static void send_data_cb(struct k_work *work)
 
 		data_initialized = true;
 	}
-
+printk("######################### CAF\n");
 	buf = net_buf_alloc(&tx_pool, K_FOREVER);
+
+	__ASSERT_NO_MSG(buf);
+
 	net_buf_reserve(buf, BT_ISO_CHAN_SEND_RESERVE);
 
 	net_buf_add_mem(buf, buf_data, len_to_send);
 	printk("#############3 send iso len %d", buf->len);
 
+
 	ret = bt_iso_chan_send(default_chan, buf, seq_num++);
-	if (ret < 0) {
-		printk("Failed to send ISO data (%d)\n", ret);
-		net_buf_unref(buf);
-
-		/* Reschedule for next interval */
-		k_work_reschedule(k_work_delayable_from_work(work), K_USEC(interval_us));
-
-		return;
-	}
-
-	enqueue_cnt--;
-	if (enqueue_cnt > 0U) {
-		/* If we have more buffers available, we reschedule the workqueue item immediately
-		 * to trigger another encode + TX, but without blocking this call for too long
-		 */
-		k_work_reschedule(k_work_delayable_from_work(work), K_NO_WAIT);
-	}
+	__ASSERT_NO_MSG(ret==0);
 }
-K_WORK_DELAYABLE_DEFINE(iso_send_work, send_data_cb);
+// K_WORK_DELAYABLE_DEFINE(iso_send_work, send_data_cb);
 
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 			 struct net_buf_simple *ad)
@@ -105,7 +95,7 @@ static void iso_connected(struct bt_iso_chan *chan)
 
 	if (chan == default_chan) {
 		/* Start send timer */
-		k_work_schedule(&iso_send_work, K_MSEC(0));
+		// k_work_schedule(&iso_send_work, K_MSEC(0));
 
 		SET_FLAG(flag_iso_connected);
 	}
@@ -116,7 +106,7 @@ static void iso_disconnected(struct bt_iso_chan *chan, uint8_t reason)
 	printk("ISO Channel %p disconnected (reason 0x%02x)\n", chan, reason);
 
 	if (chan == default_chan) {
-		k_work_cancel_delayable(&iso_send_work);
+		// k_work_cancel_delayable(&iso_send_work);
 
 		UNSET_FLAG(flag_iso_connected);
 	}
@@ -124,7 +114,7 @@ static void iso_disconnected(struct bt_iso_chan *chan, uint8_t reason)
 
 static void sdu_sent_cb(struct bt_iso_chan *chan)
 {
-	int err;
+	// int err;
 
 	enqueue_cnt++;
 
@@ -135,10 +125,10 @@ static void sdu_sent_cb(struct bt_iso_chan *chan)
 		return;
 	}
 
-	err = k_work_schedule(&iso_send_work, K_NO_WAIT);
-	if (err < 0) {
-		FAIL("Failed to schedule TX for chan %p: %d\n", chan, err);
-	}
+	// err = k_work_schedule(&iso_send_work, K_NO_WAIT);
+	// if (err < 0) {
+		// FAIL("Failed to schedule TX for chan %p: %d\n", chan, err);
+	// }
 }
 
 static void init(void)
@@ -399,6 +389,7 @@ static void terminate_cig(void)
 CREATE_FLAG(first_frag);
 
 static size_t curr_len;
+extern void bt_conn_suspend_tx(bool suspend);
 
 static void set_flags(size_t length)
 {
@@ -415,6 +406,7 @@ static void set_flags(size_t length)
 		printk("\nblahblah\n\n");
 
 		SET_FLAG(first_frag);
+		bt_conn_suspend_tx(true);
 	}
 
 	// if (curr_len == expect_len) {
@@ -424,7 +416,6 @@ static void set_flags(size_t length)
 }
 
 int __real_bt_send(struct net_buf *buf);
-
 int __wrap_bt_send(struct net_buf *buf)
 {
 	if (bt_buf_get_type(buf) == BT_BUF_ISO_OUT) {
@@ -444,13 +435,16 @@ int __wrap_bt_send(struct net_buf *buf)
 	return __real_bt_send(buf);
 }
 
-static void test_main(void)
+static void test_loop(void)
 {
-	init();
+	UNSET_FLAG(first_frag);
+	curr_len=0;
+
 	create_cig(1);
 	reconfigure_cig();
 	connect_acl();
 	connect_cis();
+	send_data_cb();
 
 	// while (seq_num < 100U) {
 		// k_sleep(K_USEC(interval_us));
@@ -458,13 +452,27 @@ static void test_main(void)
 
 	WAIT_FOR_FLAG_SET(first_frag);
 
+	printk("########################### BIT-CONNEEEEEEEEEECT\n");
 	disconnect_cis();
+		bt_conn_suspend_tx(false);
+
+
 	disconnect_acl();
 	terminate_cig();
-
-	PASS("Test passed\n");
+	k_msleep(1000);
 }
 
+static void test_main(void)
+{
+	init();
+
+	for (int l=0; l < (ENQUEUE_COUNT * 2); l++) {
+		test_loop();
+	}
+
+	// TEST_PASS_AND_EXIT("Test passed\n");
+	PASS("Test passed\n");
+}
 static const struct bst_test_instance test_def[] = {
 	{
 		.test_id = "central",
