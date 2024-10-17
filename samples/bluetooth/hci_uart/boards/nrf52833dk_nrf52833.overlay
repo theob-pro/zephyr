@@ -10,3 +10,15 @@
 	status = "okay";
 	hw-flow-control;
 };
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		hw-flow-control;
+	};
+};
+/{
+	chosen {
+		zephyr,bt-c2h-uart = &cdc_acm_uart0;
+	};
+};
