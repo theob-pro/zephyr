@@ -859,11 +859,25 @@ config BT_SCAN_AND_INITIATE_IN_PARALLEL
 	  Scanning with a timeout is not supported when this
 	  feature is enabled.
 
+choice BT_DEVICE_NAME_TYPE
+	prompt "Bluetooth device name type"
+	default BT_DEVICE_NAME_STATIC
+
 config BT_DEVICE_NAME_DYNAMIC
 	bool "Allow to set Bluetooth device name on runtime"
 	help
 	  Enabling this option allows for runtime configuration of Bluetooth
 	  device name.
+
+config BT_DEVICE_NAME_STATIC
+	bool "Set the Bluetooth device name at compile time"
+	help
+	  Enabling this option will set the Bluetooth device name based on
+	  CONFIG_BT_DEVICE_NAME.
+
+endchoice
+
+if BT_DEVICE_NAME_DYNAMIC
 
 config BT_DEVICE_NAME_MAX
 	int "Maximum size in bytes for device name"
@@ -874,12 +888,18 @@ config BT_DEVICE_NAME_MAX
 	  Bluetooth device name storage size. Storage can be up to 248 bytes
 	  long (excluding NULL termination).
 
+endif
+
+if BT_DEVICE_NAME_STATIC
+
 config BT_DEVICE_NAME
 	string "Bluetooth device name"
 	default "Zephyr"
 	help
 	  Bluetooth device name. Name can be up to 248 bytes long (excluding
 	  NULL termination). Can be empty string.
+
+endif
 
 config BT_DEVICE_APPEARANCE_DYNAMIC
 	bool "Runtime Bluetooth Appearance changing"
